@@ -18,3 +18,6 @@ def test_example_config_loads() -> None:
     assert settings.concurrency.generation == 1
     assert settings.backend in {"mlx", "ollama"}
     assert settings.fast.base_url.startswith("http://127.0.0.1")
+    assert settings.nlp.german_model == "de_core_news_lg"
+    assert settings.nlp.hungarian_model == "hu_core_news_lg"
+    assert settings.nlp.lemma_batch_size == 50

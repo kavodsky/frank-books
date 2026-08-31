@@ -484,9 +484,10 @@ Steps:
 - **7.5 One execution path.** Generation is started ONLY by materializing the
   generation asset in Dagster — there is no second runner and no `frank generate`
   command. The CLI keeps only hands-on commands: `ingest`, `inspect`,
-  `review-terms`, `approve`, `render`, `status`, `report`, `bench`. Step functions
-  stay pure functions over DB + cache with NO Dagster imports inside
-  `frank/steps/` (so they remain unit-testable), but only one caller drives them.
+  `annotate`, `review-terms`, `approve`, `render`, `status`, `report`, `bench`.
+  Step functions stay pure functions over DB + cache with NO Dagster imports
+  inside `frank/steps/` (so they remain unit-testable), but only one caller
+  drives generation.
 
 **Acceptance:** a ~2-hour session advances the book and can be interrupted at any
 moment without loss; there is exactly one way to start generation; killing the model server mid-run yields a red asset with

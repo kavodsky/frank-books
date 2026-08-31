@@ -24,7 +24,7 @@ See `specs/roadmap.md` for phases and what is implemented.
 ```bash
 uv sync
 uv run python -m spacy download de_core_news_lg
-uv run pip install hu_core_news_lg   # HuSpaCy model, see their docs
+# hu_core_news_lg (HuSpaCy, spaCy 3.8): https://huggingface.co/huspacy/hu_core_news_lg
 cp config.example.toml config.toml   # set model names, ports, language pair
 process-compose up                   # model servers + dagster
 ```
@@ -34,7 +34,8 @@ process-compose up                   # model servers + dagster
 ```bash
 uv run frank ingest path/to/book.html --slug pecsenye --lang hu
 uv run frank inspect pecsenye                    # sanity report; fix book.toml if needed
-# annotate + analyze: materialize those assets in the Dagster UI
+uv run frank annotate pecsenye                   # sentence split (spaCy / HuSpaCy)
+# morphology + analysis: later roadmap steps, then Dagster for generation
 uv run frank review-terms pecsenye > terms.toml   # export termbase + characters
 $EDITOR terms.toml                              # ~15 min: check names, genders, T/V
 uv run frank approve pecsenye < terms.toml

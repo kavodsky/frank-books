@@ -2,22 +2,29 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 
 from frank.domain.errors import ErrorClass
+from frank.domain.model.annotation import MorphFeature, Morphology, Token
 from frank.domain.model.book import (
     Book,
     BookStatus,
     Chapter,
     Paragraph,
     ParagraphStatus,
+    Sentence,
 )
+from frank.domain.model.lemma import LemmaOverride, LemmaSource
 from frank.domain.model.run import Run, RunStatus
 from frank.infrastructure.persistence.tables import (
     BookRow,
     ChapterRow,
+    LemmaOverrideRow,
     ParagraphRow,
     RunRow,
+    SentenceRow,
+    TokenRow,
 )
 
 
@@ -123,4 +130,75 @@ def row_from_paragraph(paragraph: Paragraph) -> ParagraphRow:
         raw_text=paragraph.raw_text,
         hash=paragraph.hash,
         status=paragraph.status.value,
+    )
+
+
+def sentence_from_row(row: SentenceRow) -> Sentence:
+    return Sentence(
+        id=row.id,
+        paragraph_id=row.paragraph_id,
+        index=row.index,
+        text=row.text,
+    )
+
+
+def row_from_sentence(sentence: Sentence) -> SentenceRow:
+    return SentenceRow(
+        id=sentence.id,
+        paragraph_id=sentence.paragraph_id,
+        index=sentence.index,
+        text=sentence.text,
+    )
+
+
+def token_from_row(row: TokenRow) -> Token:
+    return Token(
+        id=row.id,
+        sentence_id=row.sentence_id,
+        index=row.index,
+        surface=row.surface,
+        lemma=row.lemma,
+        upos=row.upos,
+        morph=_morph_from_json(row.morph_json),
+    )
+
+
+def row_from_token(token: Token) -> TokenRow:
+    return TokenRow(
+        id=token.id,
+        sentence_id=token.sentence_id,
+        index=token.index,
+        surface=token.surface,
+        lemma=token.lemma,
+        upos=token.upos,
+        morph_json=_morph_to_json(token.morph),
+    )
+
+
+def _morph_from_json(payload: str) -> Morphology:
+    raw = json.loads(payload)
+    features = tuple(MorphFeature(key=key, value=str(raw[key])) for key in sorted(raw))
+    return Morphology(features=features)
+
+
+def _morph_to_json(morph: Morphology) -> str:
+    mapping = {feature.key: feature.value for feature in morph.features}
+    return json.dumps(mapping, ensure_ascii=False, sort_keys=True)
+
+
+def override_from_row(row: LemmaOverrideRow) -> LemmaOverride:
+    return LemmaOverride(
+        surface=row.surface,
+        upos=row.upos,
+        lemma=row.lemma,
+        source=LemmaSource(row.source),
+    )
+
+
+def row_from_override(item: LemmaOverride) -> LemmaOverrideRow:
+    return LemmaOverrideRow(
+        surface=item.surface,
+        upos=item.upos,
+        lemma=item.lemma,
+        source=item.source.value,
     )

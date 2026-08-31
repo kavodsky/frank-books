@@ -1,4 +1,4 @@
-"""Book, Chapter, Paragraph — ingestion-time structure (Passage comes in 2.5)."""
+"""Book, Chapter, Paragraph, Sentence — Passage grouping comes in 2.5."""
 
 from __future__ import annotations
 
@@ -49,6 +49,15 @@ class Paragraph(BaseModel):
     raw_text: str
     hash: str
     status: ParagraphStatus
+
+
+class Sentence(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    paragraph_id: str
+    index: int
+    text: str
 
 
 class BookStructure(BaseModel):

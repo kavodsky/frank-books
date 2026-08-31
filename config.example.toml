@@ -33,3 +33,8 @@ max_paragraph_chars = 1500
 header_max_chars = 60
 header_min_repeats = 3
 foreign_script_ratio = 0.08
+
+[nlp]
+german_model = "de_core_news_lg"
+hungarian_model = "hu_core_news_lg"
+lemma_batch_size = 50

@@ -13,6 +13,7 @@ forbidden_modules =
     tenacity
     dagster
     spacy
+    huspacy
     docx
     jinja2
     typer
@@ -22,6 +23,7 @@ forbidden_modules =
     bs4
     ebooklib
     trafilatura
+    simplemma
     charset_normalizer
 
 [importlinter:contract:domain-no-config]

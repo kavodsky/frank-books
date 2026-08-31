@@ -8,6 +8,11 @@ from typing import Annotated
 
 import typer
 
+from frank.application.annotate_chapter import (
+    AnnotatePorts,
+    annotate_book,
+    render_annotate_report,
+)
 from frank.application.ingest_book import (
     IngestPorts,
     IngestRequest,
@@ -23,6 +28,10 @@ from frank.infrastructure.llm.benchmark import (
     run_benchmark,
 )
 from frank.infrastructure.llm.client import OpenAiChatClient, chat_client_from_settings
+from frank.infrastructure.nlp.lemma_arbiter import ArbiterConfig, SmartLemmaArbiter
+from frank.infrastructure.nlp.lexicon import FileLexicon, lexicon_path
+from frank.infrastructure.nlp.load import load_analyzer
+from frank.infrastructure.persistence.cache import StepCache
 from frank.infrastructure.persistence.repositories import SqliteBookRepository
 from frank.infrastructure.persistence.tables import create_book_db
 from frank.infrastructure.sources.fetch import LocalFileFetcher
@@ -126,12 +135,47 @@ def inspect_cmd(
         raise typer.Exit(code=1)
 
 
+@app.command()
+def annotate(
+    slug: Annotated[str, typer.Argument(help="Book slug under books/")],
+    config: Annotated[Path, typer.Option("--config")] = Path("config.toml"),
+) -> None:
+    """Split ingested paragraphs into sentences and refine lemmas."""
+    settings = load_settings(config)
+    report = annotate_book(_annotate_ports(settings, slug), slug)
+    typer.echo(render_annotate_report(report))
+
+
 def _ports(settings: Settings) -> IngestPorts:
     return IngestPorts(
         fetcher=LocalFileFetcher(settings.languages.source),
         raw_store=FilesystemRawStore(_BOOKS_DIR),
         open_books=_open_books,
         books_dir=_BOOKS_DIR,
+    )
+
+
+def _annotate_ports(settings: Settings, slug: str) -> AnnotatePorts:
+    return AnnotatePorts(
+        open_books=_open_books,
+        analyzer_for=lambda lang: load_analyzer(lang, settings.nlp),
+        lexicon_for=lambda lang: FileLexicon(lexicon_path(lang)),
+        arbiter_for=lambda lang: _lemma_arbiter(settings, slug, lang),
+    )
+
+
+def _lemma_arbiter(settings: Settings, slug: str, lang: str) -> SmartLemmaArbiter:
+    return SmartLemmaArbiter(
+        client=chat_client_from_settings(settings, _BOOKS_DIR / slug / "logs"),
+        config=ArbiterConfig(
+            model=settings.smart.name,
+            base_url=settings.smart.base_url,
+            timeout_seconds=settings.budgets.llm_timeout_seconds,
+            batch_size=settings.nlp.lemma_batch_size,
+            slug=slug,
+        ),
+        cache=StepCache(_BOOKS_DIR / slug / "cache"),
+        lexicon=FileLexicon(lexicon_path(lang)),
     )
 
 

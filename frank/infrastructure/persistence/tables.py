@@ -80,6 +80,15 @@ class TokenRow(Base):
     morph_json: Mapped[str] = mapped_column(Text)
 
 
+class LemmaOverrideRow(Base):
+    __tablename__ = "lemma_override"
+
+    surface: Mapped[str] = mapped_column(String, primary_key=True)
+    upos: Mapped[str] = mapped_column(String, primary_key=True)
+    lemma: Mapped[str]
+    source: Mapped[str]
+
+
 class TermRow(Base):
     __tablename__ = "term"
 

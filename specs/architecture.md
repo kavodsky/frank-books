@@ -135,7 +135,7 @@ frank-books/
         macos.py
 
     interfaces/        # entry points. Thin. No logic
-      cli.py           # Typer: ingest, inspect, review-terms, approve, render, status, report, bench
+      cli.py           # Typer: ingest, inspect, annotate, review-terms, approve, render, status, report, bench
       dagster_defs.py  # assets, asset checks, resources, RetryPolicy — calls application use cases
 
     config.py        # pydantic-settings

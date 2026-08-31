@@ -10,23 +10,34 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from frank.domain.errors import DbError, FrankError
-from frank.domain.model.book import BookStatus, BookStructure
+from frank.domain.model.annotation import Annotation, Token
+from frank.domain.model.book import BookStatus, BookStructure, Sentence
+from frank.domain.model.lemma import LemmaOverride
 from frank.domain.model.run import Run, RunFailure, RunStatus, RunTally
 from frank.infrastructure.persistence.mappers import (
     book_from_row,
     chapter_from_row,
+    override_from_row,
     paragraph_from_row,
     row_from_book,
     row_from_chapter,
+    row_from_override,
     row_from_paragraph,
     row_from_run,
+    row_from_sentence,
+    row_from_token,
     run_from_row,
+    sentence_from_row,
+    token_from_row,
 )
 from frank.infrastructure.persistence.tables import (
     BookRow,
     ChapterRow,
+    LemmaOverrideRow,
     ParagraphRow,
     RunRow,
+    SentenceRow,
+    TokenRow,
 )
 
 
@@ -143,11 +154,70 @@ class SqliteBookRepository:
             book_row.status = status.value
             session.commit()
 
+    def replace_annotation(self, slug: str, annotation: Annotation) -> None:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            _delete_sentences(session, book_id)
+            session.add_all([row_from_sentence(item) for item in annotation.sentences])
+            session.add_all([row_from_token(item) for item in annotation.tokens])
+            session.commit()
+
+    def get_sentences(self, slug: str) -> tuple[Sentence, ...]:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            rows = session.scalars(
+                select(SentenceRow)
+                .join(ParagraphRow, SentenceRow.paragraph_id == ParagraphRow.id)
+                .join(ChapterRow, ParagraphRow.chapter_id == ChapterRow.id)
+                .where(ChapterRow.book_id == book_id)
+                .order_by(ChapterRow.index, ParagraphRow.index, SentenceRow.index)
+            ).all()
+            return tuple(sentence_from_row(row) for row in rows)
+
+    def get_tokens(self, slug: str) -> tuple[Token, ...]:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            rows = session.scalars(
+                select(TokenRow)
+                .join(SentenceRow, TokenRow.sentence_id == SentenceRow.id)
+                .join(ParagraphRow, SentenceRow.paragraph_id == ParagraphRow.id)
+                .join(ChapterRow, ParagraphRow.chapter_id == ChapterRow.id)
+                .where(ChapterRow.book_id == book_id)
+                .order_by(
+                    ChapterRow.index,
+                    ParagraphRow.index,
+                    SentenceRow.index,
+                    TokenRow.index,
+                )
+            ).all()
+            return tuple(token_from_row(row) for row in rows)
+
+    def replace_overrides(
+        self, slug: str, overrides: tuple[LemmaOverride, ...]
+    ) -> None:
+        with Session(self._engine) as session:
+            _book_id(session, slug)
+            session.execute(delete(LemmaOverrideRow))
+            session.add_all([row_from_override(item) for item in overrides])
+            session.commit()
+
+    def get_overrides(self, slug: str) -> tuple[LemmaOverride, ...]:
+        with Session(self._engine) as session:
+            _book_id(session, slug)
+            rows = session.scalars(
+                select(LemmaOverrideRow).order_by(
+                    LemmaOverrideRow.surface, LemmaOverrideRow.upos
+                )
+            ).all()
+            return tuple(override_from_row(row) for row in rows)
+
 
 def _wipe_book(session: Session, slug: str) -> None:
     book = session.scalar(select(BookRow).where(BookRow.slug == slug))
     if book is None:
         return
+    _delete_sentences(session, book.id)
+    session.execute(delete(LemmaOverrideRow))
     chapter_ids = session.scalars(
         select(ChapterRow.id).where(ChapterRow.book_id == book.id)
     ).all()
@@ -157,3 +227,27 @@ def _wipe_book(session: Session, slug: str) -> None:
         )
         session.execute(delete(ChapterRow).where(ChapterRow.book_id == book.id))
     session.execute(delete(BookRow).where(BookRow.id == book.id))
+
+
+def _book_id(session: Session, slug: str) -> str:
+    book = session.scalar(select(BookRow).where(BookRow.slug == slug))
+    if book is None:
+        raise DbError(f"book not found: {slug}")
+    return book.id
+
+
+def _delete_sentences(session: Session, book_id: str) -> None:
+    paragraph_ids = session.scalars(
+        select(ParagraphRow.id)
+        .join(ChapterRow, ParagraphRow.chapter_id == ChapterRow.id)
+        .where(ChapterRow.book_id == book_id)
+    ).all()
+    if not paragraph_ids:
+        return
+    sentence_ids = session.scalars(
+        select(SentenceRow.id).where(SentenceRow.paragraph_id.in_(paragraph_ids))
+    ).all()
+    if not sentence_ids:
+        return
+    session.execute(delete(TokenRow).where(TokenRow.sentence_id.in_(sentence_ids)))
+    session.execute(delete(SentenceRow).where(SentenceRow.id.in_(sentence_ids)))

@@ -46,6 +46,12 @@ class IngestSettings(BaseModel):
     foreign_script_ratio: float = Field(gt=0, lt=1)
 
 
+class NlpSettings(BaseModel):
+    german_model: str
+    hungarian_model: str
+    lemma_batch_size: int = Field(ge=1, le=200)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="forbid")
 
@@ -56,6 +62,7 @@ class Settings(BaseSettings):
     concurrency: Concurrency
     languages: Languages
     ingest: IngestSettings
+    nlp: NlpSettings
 
 
 def load_settings(path: Path | None = None) -> Settings:

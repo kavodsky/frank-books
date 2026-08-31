@@ -1,0 +1,4 @@
+{"surface": "sah", "upos": "VERB", "sentence": "Der Arzt sah das Kind.", "analyzer_lemma": "sah", "second_lemma": "sehen", "lemma": "sehen"}
+{"surface": "ging", "upos": "VERB", "sentence": "Dr. Müller ging nach Hause.", "analyzer_lemma": "ging", "second_lemma": "gehen", "lemma": "gehen"}
+{"surface": "felállt", "upos": "VERB", "sentence": "Az orvos felállt.", "analyzer_lemma": "felállt", "second_lemma": "feláll", "lemma": "feláll"}
+{"surface": "elindult", "upos": "VERB", "sentence": "A királyfi elindult.", "analyzer_lemma": "elindult", "second_lemma": "elindul", "lemma": "elindul"}

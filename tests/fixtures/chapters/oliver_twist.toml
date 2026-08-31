@@ -1,0 +1,18 @@
+# Provenance for the Oliver Twist chapter fixtures. Not a book.toml.
+
+[de]
+file = "oliver_twist_de.txt"
+title = "Oliver Twist"
+author = "Charles Dickens"
+source_url = "https://www.gutenberg.org/ebooks/56586"
+license_note = "Project Gutenberg License (ebook 56586, German, Globus Verlag)"
+excerpt = "Chapters 1–2, through the five-pound notice after Oliver asks for more."
+
+[hu]
+file = "oliver_twist_hu.txt"
+title = "Twist Olivér"
+author = "Charles Dickens"
+adapter = "Csánk Endre"
+source_url = "https://mek.oszk.hu/15500/15579/"
+license_note = "CC BY-SA 4.0 (MEK-15579, Franklin-Társulat)"
+excerpt = "Első–második fejezet, through the five-pound notice after Olivér asks for more."

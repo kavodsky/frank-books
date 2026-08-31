@@ -12,3 +12,13 @@ class BenchTranslation(BaseModel):
 class BenchJudgement(BaseModel):
     score: int = Field(ge=1, le=5)
     comment: str
+
+
+class LemmaProposal(BaseModel):
+    surface: str
+    upos: str
+    lemma: str
+
+
+class LemmaBatchResult(BaseModel):
+    items: list[LemmaProposal]

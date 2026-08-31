@@ -1,1 +1,1 @@
-"""Pure domain logic: normalization, structure detection, ingestion checks."""
+"""Pure domain logic: normalization, structure, inspect, annotation, lemmas."""
