@@ -1,0 +1,40 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: check-toml
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.5
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (strict on domain + application)
+        entry: uv run mypy frank/domain frank/application
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: lint-imports
+        name: import-linter (layer boundaries)
+        entry: uv run lint-imports
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: pytest-unit
+        name: pytest (unit + architecture)
+        entry: uv run pytest -m "unit or architecture"
+        language: system
+        types: [python]
+        pass_filenames: false

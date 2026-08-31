@@ -1,0 +1,35 @@
+# Copy to config.toml and set FAST / SMART model names from `frank bench`.
+# Do not put model names anywhere else.
+
+backend = "mlx"
+
+[fast]
+name = "fast-model"
+base_url = "http://127.0.0.1:11434/v1"
+
+[smart]
+name = "smart-model"
+base_url = "http://127.0.0.1:8080/v1"
+
+[budgets]
+prompt_tokens = 1800
+llm_timeout_seconds = 120
+llm_max_retries = 3
+llm_retry_min_seconds = 1.0
+llm_retry_max_seconds = 8.0
+session_max_minutes = 120
+session_max_passages = 12
+
+[concurrency]
+analysis = 2
+generation = 1
+
+[languages]
+source = "hu"
+target = "uk"
+
+[ingest]
+max_paragraph_chars = 1500
+header_max_chars = 60
+header_min_repeats = 3
+foreign_script_ratio = 0.08

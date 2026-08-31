@@ -1,0 +1,14 @@
+# Runtime output: re-derivable from books/<slug>/raw/ plus the committed specs.
+books/
+
+# Local machine config; config.example.toml is the committed template.
+config.toml
+
+.venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.dagster/
+.DS_Store

@@ -1,0 +1,41 @@
+[importlinter]
+root_package = frank
+include_external_packages = True
+
+[importlinter:contract:domain-purity]
+name = Domain imports nothing external
+type = forbidden
+source_modules =
+    frank.domain
+forbidden_modules =
+    sqlalchemy
+    httpx
+    tenacity
+    dagster
+    spacy
+    docx
+    jinja2
+    typer
+    rich
+    pydantic_settings
+    sacrebleu
+    bs4
+    ebooklib
+    trafilatura
+    charset_normalizer
+
+[importlinter:contract:domain-no-config]
+name = Domain does not import settings
+type = forbidden
+source_modules =
+    frank.domain
+forbidden_modules =
+    frank.config
+
+[importlinter:contract:layer-direction]
+name = Layer dependency direction
+type = layers
+layers =
+    frank.interfaces
+    frank.application | frank.infrastructure
+    frank.domain

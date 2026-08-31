@@ -1,0 +1,22 @@
+# Ports and model names must match config.toml.
+# For Ollama: comment out `fast` and `smart`, run a single `ollama serve`,
+# and point both base_urls at http://127.0.0.1:11434/v1.
+
+processes:
+  fast:
+    command: python -m mlx_lm.server --port 11434
+    availability:
+      restart: on_failure
+  smart:
+    command: python -m mlx_lm.server --port 8080
+    availability:
+      restart: on_failure
+  dagster:
+    command: uv run dagster dev -m frank.interfaces.dagster_defs
+    availability:
+      restart: on_failure
+    depends_on:
+      fast:
+        condition: process_started
+      smart:
+        condition: process_started
