@@ -96,4 +96,5 @@ fiú
 lány
 feláll
 elindul
+elolvas
 dologház

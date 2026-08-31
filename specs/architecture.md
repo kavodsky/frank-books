@@ -57,6 +57,7 @@ frank-books/
     de_frequency_top.txt
     hu_frequency_top.txt
     de_separable_prefixes.txt
+    de_ambiguous_prefixes.txt
     hu_igekoto.txt
     uk_exonyms.toml          # conventional Ukrainian place/person forms
     uk_calques.toml          # Russian-calque blacklist (validation)
@@ -70,6 +71,7 @@ frank-books/
     de_sample.jsonl          # 50+ sentences w/ reference Ukrainian
     hu_sample.jsonl
     lemma_disputed.jsonl     # lemma-arbitration mini-benchmark
+    reunion.jsonl            # separable-verb / igekötő pairing mini-benchmark
 
   books/                     # ALL runtime output, gitignored
     <slug>/
@@ -86,6 +88,7 @@ frank-books/
       model/           # entities & value objects (Pydantic BaseModel / dataclasses)
         book.py        #   Book, Chapter, Passage, Paragraph, Sentence
         annotation.py  #   Token, Morphology, SenseUnit, GlossDecision
+        reunion.py     #   VerbParticle, PrefixInventory, ReunionCandidate
         frank.py       #   FrankRecord, SenseUnitTranslation, WordNote
         termbase.py    #   Term, Character, AddressForm, StyleCard
         context.py     #   PromptContext and its budget sections
@@ -127,6 +130,8 @@ frank-books/
         german.py            # spaCy pipeline -> ParsedSentence VOs
         hungarian.py         # HuSpaCy + emmorph -> ParsedSentence VOs
         lemma_arbiter.py     # dual-lemmatizer + batched LLM arbitration
+        reunion_arbiter.py   # separable-verb / igekötő SMART validation
+        prefixes.py          # closed particle lists from data/
       sources/
         txt.py, html.py, epub.py   # local files only (ADR 0013)
       rendering/

@@ -153,3 +153,6 @@ and note it.
   no — the unadapted passage is always clean.)
 - Hungarian `maga` vs `ön` — is a gloss enough, or is a per-book StyleCard
   directive needed?
+- German separable-particle dependency label: roadmap 2.2c says `svp`, tech-stack
+  says `prt`. `de_core_news_lg` 3.8 emits `svp` (UPOS `ADP`). Conservative: accept
+  `svp`, `prt`, and `compound:prt`.

@@ -13,7 +13,7 @@ class FileLexicon:
     def __init__(self, path: Path) -> None:
         if not path.is_file():
             raise UnknownError(f"frequency list not found: {path}")
-        self._forms = _load(path)
+        self._forms = load_forms(path)
 
     def contains(self, form: str) -> bool:
         return form.casefold() in self._forms
@@ -23,7 +23,7 @@ def lexicon_path(lang: str) -> Path:
     return _REPO_DATA / f"{lang}_frequency_top.txt"
 
 
-def _load(path: Path) -> frozenset[str]:
+def load_forms(path: Path) -> frozenset[str]:
     forms: list[str] = []
     for line in path.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()

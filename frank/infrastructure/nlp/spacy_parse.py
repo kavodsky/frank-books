@@ -31,17 +31,12 @@ def parsed_sentences(doc: Doc) -> tuple[ParsedSentence, ...]:
 
 
 def _tokens(sent: Span) -> tuple[ParsedToken, ...]:
-    found: list[ParsedToken] = []
-    index = 1
-    for token in sent:
-        if token.is_space:
-            continue
-        found.append(_parsed_token(token, index))
-        index += 1
-    return tuple(found)
+    kept = [token for token in sent if not token.is_space]
+    index_of = {token.i: index for index, token in enumerate(kept, start=1)}
+    return tuple(_parsed_token(token, index_of[token.i], index_of) for token in kept)
 
 
-def _parsed_token(token: Token, index: int) -> ParsedToken:
+def _parsed_token(token: Token, index: int, index_of: dict[int, int]) -> ParsedToken:
     surface = token.text
     lemma = token.lemma_.strip() or surface
     return ParsedToken(
@@ -50,7 +45,15 @@ def _parsed_token(token: Token, index: int) -> ParsedToken:
         lemma=lemma,
         upos=token.pos_ or "X",
         morph=_morphology(token),
+        dep=token.dep_ or "",
+        head_index=_head_index(token, index_of),
     )
+
+
+def _head_index(token: Token, index_of: dict[int, int]) -> int:
+    if token.head.i == token.i:
+        return 0
+    return index_of.get(token.head.i, 0)
 
 
 def _morphology(token: Token) -> Morphology:

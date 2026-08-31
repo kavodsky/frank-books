@@ -9,8 +9,10 @@ dependencies = [
     "charset-normalizer>=3.5.1",
     "dagster>=1.13.20",
     "dagster-webserver>=1.13.20",
+    "de-core-news-lg",
     "ebooklib>=0.20",
     "httpx>=0.28.1",
+    "hu-core-news-lg",
     "jinja2>=3.1.6",
     "lxml>=6.1.2",
     "pydantic>=2.13.5",
@@ -101,6 +103,10 @@ markers = [
 
 [tool.dagster]
 module_name = "frank.interfaces.dagster_defs"
+
+[tool.uv.sources]
+de-core-news-lg = { url = "https://github.com/explosion/spacy-models/releases/download/de_core_news_lg-3.8.0/de_core_news_lg-3.8.0-py3-none-any.whl" }
+hu-core-news-lg = { url = "https://huggingface.co/huspacy/hu_core_news_lg/resolve/main/hu_core_news_lg-3.8.1-py3-none-any.whl" }
 
 [dependency-groups]
 dev = [

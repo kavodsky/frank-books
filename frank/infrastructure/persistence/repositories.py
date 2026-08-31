@@ -13,16 +13,19 @@ from frank.domain.errors import DbError, FrankError
 from frank.domain.model.annotation import Annotation, Token
 from frank.domain.model.book import BookStatus, BookStructure, Sentence
 from frank.domain.model.lemma import LemmaOverride
+from frank.domain.model.reunion import VerbParticle
 from frank.domain.model.run import Run, RunFailure, RunStatus, RunTally
 from frank.infrastructure.persistence.mappers import (
     book_from_row,
     chapter_from_row,
     override_from_row,
     paragraph_from_row,
+    particle_from_row,
     row_from_book,
     row_from_chapter,
     row_from_override,
     row_from_paragraph,
+    row_from_particle,
     row_from_run,
     row_from_sentence,
     row_from_token,
@@ -38,6 +41,7 @@ from frank.infrastructure.persistence.tables import (
     RunRow,
     SentenceRow,
     TokenRow,
+    VerbParticleRow,
 )
 
 
@@ -160,6 +164,7 @@ class SqliteBookRepository:
             _delete_sentences(session, book_id)
             session.add_all([row_from_sentence(item) for item in annotation.sentences])
             session.add_all([row_from_token(item) for item in annotation.tokens])
+            session.add_all([row_from_particle(item) for item in annotation.particles])
             session.commit()
 
     def get_sentences(self, slug: str) -> tuple[Sentence, ...]:
@@ -191,6 +196,19 @@ class SqliteBookRepository:
                 )
             ).all()
             return tuple(token_from_row(row) for row in rows)
+
+    def get_particles(self, slug: str) -> tuple[VerbParticle, ...]:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            rows = session.scalars(
+                select(VerbParticleRow)
+                .join(SentenceRow, VerbParticleRow.sentence_id == SentenceRow.id)
+                .join(ParagraphRow, SentenceRow.paragraph_id == ParagraphRow.id)
+                .join(ChapterRow, ParagraphRow.chapter_id == ChapterRow.id)
+                .where(ChapterRow.book_id == book_id)
+                .order_by(SentenceRow.index, VerbParticleRow.particle_token_id)
+            ).all()
+            return tuple(particle_from_row(row) for row in rows)
 
     def replace_overrides(
         self, slug: str, overrides: tuple[LemmaOverride, ...]
@@ -249,5 +267,8 @@ def _delete_sentences(session: Session, book_id: str) -> None:
     ).all()
     if not sentence_ids:
         return
+    session.execute(
+        delete(VerbParticleRow).where(VerbParticleRow.sentence_id.in_(sentence_ids))
+    )
     session.execute(delete(TokenRow).where(TokenRow.sentence_id.in_(sentence_ids)))
     session.execute(delete(SentenceRow).where(SentenceRow.id.in_(sentence_ids)))

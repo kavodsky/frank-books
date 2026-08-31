@@ -10,6 +10,7 @@ import typer
 
 from frank.application.annotate_chapter import (
     AnnotatePorts,
+    LemmaSupport,
     annotate_book,
     render_annotate_report,
 )
@@ -31,6 +32,7 @@ from frank.infrastructure.llm.client import OpenAiChatClient, chat_client_from_s
 from frank.infrastructure.nlp.lemma_arbiter import ArbiterConfig, SmartLemmaArbiter
 from frank.infrastructure.nlp.lexicon import FileLexicon, lexicon_path
 from frank.infrastructure.nlp.load import load_analyzer
+from frank.infrastructure.nlp.prefixes import load_inventory
 from frank.infrastructure.persistence.cache import StepCache
 from frank.infrastructure.persistence.repositories import SqliteBookRepository
 from frank.infrastructure.persistence.tables import create_book_db
@@ -140,7 +142,7 @@ def annotate(
     slug: Annotated[str, typer.Argument(help="Book slug under books/")],
     config: Annotated[Path, typer.Option("--config")] = Path("config.toml"),
 ) -> None:
-    """Split ingested paragraphs into sentences and refine lemmas."""
+    """Split ingested paragraphs into sentences, tokens, lemmas, and particles."""
     settings = load_settings(config)
     report = annotate_book(_annotate_ports(settings, slug), slug)
     typer.echo(render_annotate_report(report))
@@ -159,7 +161,10 @@ def _annotate_ports(settings: Settings, slug: str) -> AnnotatePorts:
     return AnnotatePorts(
         open_books=_open_books,
         analyzer_for=lambda lang: load_analyzer(lang, settings.nlp),
-        lexicon_for=lambda lang: FileLexicon(lexicon_path(lang)),
+        lemma_support_for=lambda lang: LemmaSupport(
+            lexicon=FileLexicon(lexicon_path(lang)),
+            inventory=load_inventory(lang),
+        ),
         arbiter_for=lambda lang: _lemma_arbiter(settings, slug, lang),
     )
 

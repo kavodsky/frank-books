@@ -6,9 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from frank.application.annotate_chapter import AnnotatePorts, annotate_book
+from frank.application.annotate_chapter import (
+    AnnotatePorts,
+    LemmaSupport,
+    annotate_book,
+)
 from frank.application.ingest_book import IngestPorts, IngestRequest, ingest_book
 from frank.domain.model.annotation import Morphology, ParsedSentence, ParsedToken
+from frank.infrastructure.nlp.prefixes import load_inventory
 from frank.infrastructure.persistence.repositories import SqliteBookRepository
 from frank.infrastructure.persistence.tables import create_book_db
 from frank.infrastructure.sources.fetch import LocalFileFetcher
@@ -67,6 +72,9 @@ class IdleArbiter:
     def decide(self, disputed):
         raise AssertionError(f"unexpected lemma arbitration: {len(disputed)}")
 
+    def decide_reunions(self, pending):
+        raise AssertionError(f"unexpected reunion arbitration: {len(pending)}")
+
 
 def _ingest_ports(tmp_path: Path, lang: str) -> IngestPorts:
     return IngestPorts(
@@ -85,7 +93,10 @@ def _annotate_ports(tmp_path: Path) -> AnnotatePorts:
             create_book_db(tmp_path / slug / "book.db")
         ),
         analyzer_for=lambda _lang: PeriodAnalyzer(),
-        lexicon_for=lambda _lang: UniversalLexicon(),
+        lemma_support_for=lambda lang: LemmaSupport(
+            lexicon=UniversalLexicon(),
+            inventory=load_inventory(lang),
+        ),
         arbiter_for=lambda _lang: IdleArbiter(),
     )
 
@@ -164,3 +175,78 @@ def test_oliver_twist_annotate_tokens_all_have_lemmas(tmp_path) -> None:
     assert report.token_count == len(tokens)
     assert tokens
     assert all(token.lemma for token in tokens)
+
+
+class _SeparableAnalyzer:
+    def analyze(self, _text: str) -> tuple[ParsedSentence, ...]:
+        tokens = (
+            ParsedToken(
+                index=1,
+                surface="Er",
+                lemma="er",
+                upos="PRON",
+                morph=Morphology(),
+                dep="sb",
+                head_index=2,
+            ),
+            ParsedToken(
+                index=2,
+                surface="ruft",
+                lemma="rufen",
+                upos="VERB",
+                morph=Morphology(),
+                dep="ROOT",
+                head_index=0,
+            ),
+            ParsedToken(
+                index=3,
+                surface="an",
+                lemma="an",
+                upos="PART",
+                morph=Morphology(),
+                dep="svp",
+                head_index=2,
+            ),
+            ParsedToken(
+                index=4,
+                surface=".",
+                lemma=".",
+                upos="PUNCT",
+                morph=Morphology(),
+                dep="punct",
+                head_index=2,
+            ),
+        )
+        return (ParsedSentence(index=1, text="Er ruft an.", tokens=tokens),)
+
+    def second_lemma(self, surface: str, upos: str) -> str:
+        _ = upos
+        lemmas = {"Er": "er", "ruft": "rufen", "an": "an", ".": "."}
+        return lemmas.get(surface, surface.casefold())
+
+
+@pytest.mark.integration
+def test_annotate_persists_reunited_separable_verb(tmp_path) -> None:
+    src = tmp_path / "anrufen.txt"
+    src.write_text("Er ruft an.\n", encoding="utf-8")
+    ingest_book(_ingest_ports(tmp_path, "de"), _request(src, "anrufen", "de"))
+    ports = AnnotatePorts(
+        open_books=lambda slug: SqliteBookRepository(
+            create_book_db(tmp_path / slug / "book.db")
+        ),
+        analyzer_for=lambda _lang: _SeparableAnalyzer(),
+        lemma_support_for=lambda lang: LemmaSupport(
+            lexicon=UniversalLexicon(),
+            inventory=load_inventory(lang),
+        ),
+        arbiter_for=lambda _lang: IdleArbiter(),
+    )
+    report = annotate_book(ports, "anrufen")
+    repo = SqliteBookRepository(create_book_db(tmp_path / "anrufen" / "book.db"))
+    tokens = repo.get_tokens("anrufen")
+    particles = repo.get_particles("anrufen")
+    verb = next(token for token in tokens if token.surface == "ruft")
+    assert report.particle_count == 1
+    assert verb.reunited_lemma == "anrufen"
+    assert particles[0].reunited_lemma == "anrufen"
+    assert particles[0].verb_token_id == verb.id

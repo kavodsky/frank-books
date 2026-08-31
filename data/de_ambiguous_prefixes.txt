@@ -1,0 +1,6 @@
+# Separable only in some senses — always send to SMART (roadmap 2.2c).
+um
+über
+durch
+unter
+wieder

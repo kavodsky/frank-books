@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
 
 from frank.domain.model.book import Sentence
+from frank.domain.model.reunion import VerbParticle
 
 
 class MorphFeature(BaseModel):
@@ -34,6 +35,8 @@ class ParsedToken(BaseModel):
     lemma: str
     upos: str
     morph: Morphology
+    dep: str = ""
+    head_index: int = 0
 
 
 class ParsedSentence(BaseModel):
@@ -54,6 +57,9 @@ class Token(BaseModel):
     lemma: str
     upos: str
     morph: Morphology
+    dep: str = ""
+    head_index: int = 0
+    reunited_lemma: str | None = None
 
 
 class Annotation(BaseModel):
@@ -61,3 +67,4 @@ class Annotation(BaseModel):
 
     sentences: tuple[Sentence, ...]
     tokens: tuple[Token, ...]
+    particles: tuple[VerbParticle, ...] = ()

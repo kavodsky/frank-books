@@ -569,6 +569,14 @@ wheels = [
 ]
 
 [[package]]
+name = "de-core-news-lg"
+version = "3.8.0"
+source = { url = "https://github.com/explosion/spacy-models/releases/download/de_core_news_lg-3.8.0/de_core_news_lg-3.8.0-py3-none-any.whl" }
+wheels = [
+    { url = "https://github.com/explosion/spacy-models/releases/download/de_core_news_lg-3.8.0/de_core_news_lg-3.8.0-py3-none-any.whl", hash = "sha256:36fda650e476b54d5e87803635e36dadd1e8e034c4b5962088586d684f4c9fed" },
+]
+
+[[package]]
 name = "distlib"
 version = "0.4.3"
 source = { registry = "https://pypi.org/simple" }
@@ -617,8 +625,10 @@ dependencies = [
     { name = "charset-normalizer" },
     { name = "dagster" },
     { name = "dagster-webserver" },
+    { name = "de-core-news-lg" },
     { name = "ebooklib" },
     { name = "httpx" },
+    { name = "hu-core-news-lg" },
     { name = "jinja2" },
     { name = "lxml" },
     { name = "pydantic" },
@@ -649,8 +659,10 @@ requires-dist = [
     { name = "charset-normalizer", specifier = ">=3.5.1" },
     { name = "dagster", specifier = ">=1.13.20" },
     { name = "dagster-webserver", specifier = ">=1.13.20" },
+    { name = "de-core-news-lg", url = "https://github.com/explosion/spacy-models/releases/download/de_core_news_lg-3.8.0/de_core_news_lg-3.8.0-py3-none-any.whl" },
     { name = "ebooklib", specifier = ">=0.20" },
     { name = "httpx", specifier = ">=0.28.1" },
+    { name = "hu-core-news-lg", url = "https://huggingface.co/huspacy/hu_core_news_lg/resolve/main/hu_core_news_lg-3.8.1-py3-none-any.whl" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "lxml", specifier = ">=6.1.2" },
     { name = "pydantic", specifier = ">=2.13.5" },
@@ -1016,6 +1028,20 @@ sdist = { url = "https://files.pythonhosted.org/packages/b1/df/48c586a5fe32a0f01
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl", hash = "sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad", size = 73517, upload-time = "2024-12-06T15:37:21.509Z" },
 ]
+
+[[package]]
+name = "hu-core-news-lg"
+version = "3.8.1"
+source = { url = "https://huggingface.co/huspacy/hu_core_news_lg/resolve/main/hu_core_news_lg-3.8.1-py3-none-any.whl" }
+dependencies = [
+    { name = "spacy" },
+]
+wheels = [
+    { url = "https://huggingface.co/huspacy/hu_core_news_lg/resolve/main/hu_core_news_lg-3.8.1-py3-none-any.whl", hash = "sha256:e8cd6a5478419a8cdf3af1c3e3447565a49b8c60228acf76fdbd4c5ae3611cf1" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "spacy", specifier = ">=3.8.0,<3.9.0" }]
 
 [[package]]
 name = "humanfriendly"

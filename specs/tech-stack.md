@@ -35,8 +35,8 @@ macOS (Apple Silicon, M5 Max, 128 GB). No cloud services, no external APIs.
 
 | Area | Choice | Notes |
 |---|---|---|
-| German | spaCy + `de_core_news_lg` | Sentence split, lemmas, morph, NER, dependency parse (separable verbs via `prt`) |
-| Hungarian | **HuSpaCy** `hu_core_news_lg` | Same duties; agglutinative morphology is why we do NOT let LLMs analyze |
+| German | spaCy + `de_core_news_lg` | Pinned as a uv URL source (Explosion wheel). Sentence split, lemmas, morph, NER, dependency parse (separable verbs via `prt`) |
+| Hungarian | **HuSpaCy** `hu_core_news_lg` | Pinned as a uv URL source (Hugging Face wheel). Same duties; agglutinative morphology is why we do NOT let LLMs analyze |
 | Lemma cross-check | simplemma (de), emmorph-based analyzer via HuSpaCy (hu) | Second opinion for step 2.2b; LLM arbitrates disagreements in batched type-level calls |
 | MT metrics | sacrebleu (chrF/BLEU) | Benchmark harness + back-translation QA |
 | Lang detect | fast lang-id lib (e.g. lingua or langdetect) | Output-language guard in validation |

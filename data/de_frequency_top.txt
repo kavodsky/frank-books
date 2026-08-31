@@ -64,6 +64,7 @@ denken
 leben
 sterben
 rufen
+anrufen
 ziehen
 schlagen
 tragen

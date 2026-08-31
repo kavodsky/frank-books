@@ -78,6 +78,9 @@ class TokenRow(Base):
     lemma: Mapped[str]
     upos: Mapped[str]
     morph_json: Mapped[str] = mapped_column(Text)
+    dep: Mapped[str] = mapped_column(String, default="")
+    head_index: Mapped[int] = mapped_column(default=0)
+    reunited_lemma: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class LemmaOverrideRow(Base):
@@ -86,6 +89,18 @@ class LemmaOverrideRow(Base):
     surface: Mapped[str] = mapped_column(String, primary_key=True)
     upos: Mapped[str] = mapped_column(String, primary_key=True)
     lemma: Mapped[str]
+    source: Mapped[str]
+
+
+class VerbParticleRow(Base):
+    __tablename__ = "verb_particle"
+
+    particle_token_id: Mapped[str] = mapped_column(
+        String, ForeignKey("token.id"), primary_key=True
+    )
+    sentence_id: Mapped[str] = mapped_column(ForeignKey("sentence.id"))
+    verb_token_id: Mapped[str] = mapped_column(ForeignKey("token.id"))
+    reunited_lemma: Mapped[str]
     source: Mapped[str]
 
 

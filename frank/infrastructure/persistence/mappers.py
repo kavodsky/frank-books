@@ -16,6 +16,7 @@ from frank.domain.model.book import (
     Sentence,
 )
 from frank.domain.model.lemma import LemmaOverride, LemmaSource
+from frank.domain.model.reunion import ReunionSource, VerbParticle
 from frank.domain.model.run import Run, RunStatus
 from frank.infrastructure.persistence.tables import (
     BookRow,
@@ -25,6 +26,7 @@ from frank.infrastructure.persistence.tables import (
     RunRow,
     SentenceRow,
     TokenRow,
+    VerbParticleRow,
 )
 
 
@@ -160,6 +162,9 @@ def token_from_row(row: TokenRow) -> Token:
         lemma=row.lemma,
         upos=row.upos,
         morph=_morph_from_json(row.morph_json),
+        dep=row.dep,
+        head_index=row.head_index,
+        reunited_lemma=row.reunited_lemma,
     )
 
 
@@ -172,6 +177,9 @@ def row_from_token(token: Token) -> TokenRow:
         lemma=token.lemma,
         upos=token.upos,
         morph_json=_morph_to_json(token.morph),
+        dep=token.dep,
+        head_index=token.head_index,
+        reunited_lemma=token.reunited_lemma,
     )
 
 
@@ -200,5 +208,25 @@ def row_from_override(item: LemmaOverride) -> LemmaOverrideRow:
         surface=item.surface,
         upos=item.upos,
         lemma=item.lemma,
+        source=item.source.value,
+    )
+
+
+def particle_from_row(row: VerbParticleRow) -> VerbParticle:
+    return VerbParticle(
+        sentence_id=row.sentence_id,
+        particle_token_id=row.particle_token_id,
+        verb_token_id=row.verb_token_id,
+        reunited_lemma=row.reunited_lemma,
+        source=ReunionSource(row.source),
+    )
+
+
+def row_from_particle(item: VerbParticle) -> VerbParticleRow:
+    return VerbParticleRow(
+        sentence_id=item.sentence_id,
+        particle_token_id=item.particle_token_id,
+        verb_token_id=item.verb_token_id,
+        reunited_lemma=item.reunited_lemma,
         source=item.source.value,
     )

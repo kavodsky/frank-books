@@ -43,6 +43,8 @@ def _tokens_for_sentence(
             lemma=_lemma(token.surface, token.lemma),
             upos=token.upos or "X",
             morph=token.morph,
+            dep=token.dep,
+            head_index=token.head_index,
         )
         for token in parsed
     )

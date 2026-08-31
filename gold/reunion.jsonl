@@ -1,0 +1,4 @@
+{"lang": "de", "sentence": "Er ruft an.", "particle": "an", "verb": "rufen", "reunited_lemma": "anrufen"}
+{"lang": "de", "sentence": "Er fährt um.", "particle": "um", "verb": "fahren", "reunited_lemma": "umfahren", "ambiguous": true}
+{"lang": "hu", "sentence": "Olvasd el.", "particle": "el", "verb": "olvas", "reunited_lemma": "elolvas"}
+{"lang": "hu", "sentence": "El tudta olvasni.", "particle": "el", "verb": "olvas", "reunited_lemma": "elolvas"}

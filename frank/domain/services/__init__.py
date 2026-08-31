@@ -1,1 +1,1 @@
-"""Pure domain logic: normalization, structure, inspect, annotation, lemmas."""
+"""Pure domain logic: normalization, structure, inspect, annotation."""

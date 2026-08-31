@@ -5,9 +5,12 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
+from typing import TypeVar
 
 from frank.domain.model.lemma import DisputedLemma, LemmaOverride, LemmaSource
+from frank.domain.model.reunion import ReunionCandidate, VerbParticle
 from frank.domain.ports.linguistics import LemmaLexicon
 from frank.infrastructure.llm.client import (
     ChatMessage,
@@ -18,6 +21,7 @@ from frank.infrastructure.llm.schemas import LemmaBatchResult
 from frank.infrastructure.llm.templating import render_prompt
 from frank.infrastructure.persistence.cache import CacheKey, StepCache
 
+_T = TypeVar("_T")
 _STEP = "lemma_refine"
 _SCHEMA = LemmaBatchResult.model_json_schema()
 
@@ -38,6 +42,9 @@ class SmartLemmaArbiter:
     cache: StepCache
     lexicon: LemmaLexicon
     llm_calls: int = field(default=0)
+    _loop: asyncio.AbstractEventLoop | None = field(
+        default=None, repr=False, compare=False
+    )
 
     def decide(self, disputed: tuple[DisputedLemma, ...]) -> tuple[LemmaOverride, ...]:
         if not disputed:
@@ -46,9 +53,33 @@ class SmartLemmaArbiter:
         hit = self.cache.get(key)
         if hit is not None:
             return _overrides_from_payload(hit)
-        chosen = asyncio.run(self._arbitrate(disputed))
+        chosen = self._run(self._arbitrate(disputed))
         self.cache.put(key, _payload_from_overrides(chosen))
         return chosen
+
+    def decide_reunions(
+        self, pending: tuple[ReunionCandidate, ...]
+    ) -> tuple[VerbParticle, ...]:
+        from frank.infrastructure.nlp.reunion_arbiter import ReunionArbiter
+
+        inner = ReunionArbiter(
+            client=self.client,
+            config=self.config,
+            cache=self.cache,
+            lexicon=self.lexicon,
+            loop=self._ensure_loop(),
+        )
+        found = inner.decide(pending)
+        self.llm_calls += inner.llm_calls
+        return found
+
+    def _run(self, coro: Awaitable[_T]) -> _T:
+        return self._ensure_loop().run_until_complete(coro)
+
+    def _ensure_loop(self) -> asyncio.AbstractEventLoop:
+        if self._loop is None or self._loop.is_closed():
+            self._loop = asyncio.new_event_loop()
+        return self._loop
 
     async def _arbitrate(
         self, disputed: tuple[DisputedLemma, ...]

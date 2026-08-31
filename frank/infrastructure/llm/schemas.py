@@ -22,3 +22,13 @@ class LemmaProposal(BaseModel):
 
 class LemmaBatchResult(BaseModel):
     items: list[LemmaProposal]
+
+
+class ReunionProposal(BaseModel):
+    particle: str
+    verb: str
+    reunited_lemma: str | None
+
+
+class ReunionBatchResult(BaseModel):
+    items: list[ReunionProposal]

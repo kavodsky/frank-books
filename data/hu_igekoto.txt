@@ -1,0 +1,21 @@
+# Hungarian igekötő (roadmap 2.2c). fel/föl are orthographic variants.
+meg
+el
+ki
+be
+fel
+föl
+le
+össze
+vissza
+át
+rá
+ide
+oda
+szét
+végig
+körül
+bele
+haza
+tova
+agyon

@@ -1,0 +1,27 @@
+# German separable-verb particles (roadmap 2.2c).
+ab
+an
+auf
+aus
+bei
+da
+dar
+ein
+empor
+entgegen
+fest
+her
+hin
+los
+mit
+nach
+nieder
+statt
+teil
+vor
+vorbei
+weg
+zu
+zurecht
+zurück
+zusammen

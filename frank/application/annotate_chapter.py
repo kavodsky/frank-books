@@ -1,4 +1,4 @@
-"""Sentence split, tokens, and lemma refinement (roadmap 2.1–2.2b)."""
+"""Sentence split, tokens, lemma refinement, and reunification (roadmap 2.1–2.2c)."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from frank.domain.model.annotation import Annotation, Token
 from frank.domain.model.book import BookStructure, Paragraph, Sentence
 from frank.domain.model.lemma import LemmaOverride, LemmaPair, LemmaType
+from frank.domain.model.reunion import PrefixInventory
 from frank.domain.ports.linguistics import (
     LemmaArbiter,
     LemmaLexicon,
@@ -18,13 +19,24 @@ from frank.domain.ports.linguistics import (
 from frank.domain.ports.repositories import BookRepository
 from frank.domain.services.annotation import annotate_paragraph
 from frank.domain.services.lemmas import apply_overrides, lemma_types, partition_lemmas
+from frank.domain.services.reunification import (
+    apply_reunions,
+    partition_reunions,
+    reunion_candidates,
+)
+
+
+@dataclass(frozen=True)
+class LemmaSupport:
+    lexicon: LemmaLexicon
+    inventory: PrefixInventory
 
 
 @dataclass(frozen=True)
 class AnnotatePorts:
     open_books: Callable[[str], BookRepository]
     analyzer_for: Callable[[str], LinguisticAnalyzer]
-    lexicon_for: Callable[[str], LemmaLexicon]
+    lemma_support_for: Callable[[str], LemmaSupport]
     arbiter_for: Callable[[str], LemmaArbiter]
 
 
@@ -36,6 +48,7 @@ class AnnotateReport(BaseModel):
     sentence_count: int
     token_count: int
     override_count: int
+    particle_count: int
 
 
 def annotate_book(ports: AnnotatePorts, slug: str) -> AnnotateReport:
@@ -43,18 +56,20 @@ def annotate_book(ports: AnnotatePorts, slug: str) -> AnnotateReport:
     structure = repo.get_structure(slug)
     lang = structure.book.lang
     analyzer = ports.analyzer_for(lang)
+    support = ports.lemma_support_for(lang)
+    arbiter = ports.arbiter_for(lang)
     annotation = _annotate_structure(structure, analyzer)
-    refined, overrides = _refine(
-        annotation, analyzer, ports.lexicon_for(lang), ports.arbiter_for(lang)
-    )
-    repo.replace_annotation(slug, refined)
+    refined, overrides = _refine(annotation, analyzer, support.lexicon, arbiter)
+    reunited = _reunite(refined, support.inventory, support.lexicon, arbiter)
+    repo.replace_annotation(slug, reunited)
     repo.replace_overrides(slug, overrides)
     return AnnotateReport(
         slug=slug,
         paragraph_count=len(structure.paragraphs),
-        sentence_count=len(refined.sentences),
-        token_count=len(refined.tokens),
+        sentence_count=len(reunited.sentences),
+        token_count=len(reunited.tokens),
         override_count=len(overrides),
+        particle_count=len(reunited.particles),
     )
 
 
@@ -65,6 +80,7 @@ def render_annotate_report(report: AnnotateReport) -> str:
         f"sentences: {report.sentence_count}\n"
         f"tokens: {report.token_count}\n"
         f"lemma_overrides: {report.override_count}\n"
+        f"verb_particles: {report.particle_count}\n"
     )
 
 
@@ -98,6 +114,22 @@ def _refine(
     overrides = arbiter.decide(disputed)
     tokens = apply_overrides(annotation.tokens, overrides)
     return Annotation(sentences=annotation.sentences, tokens=tokens), overrides
+
+
+def _reunite(
+    annotation: Annotation,
+    inventory: PrefixInventory,
+    lexicon: LemmaLexicon,
+    arbiter: LemmaArbiter,
+) -> Annotation:
+    candidates = reunion_candidates(annotation, inventory, lexicon)
+    accepted, pending = partition_reunions(candidates)
+    voted = arbiter.decide_reunions(pending) if pending else ()
+    particles = accepted + voted
+    tokens = apply_reunions(annotation.tokens, particles)
+    return Annotation(
+        sentences=annotation.sentences, tokens=tokens, particles=particles
+    )
 
 
 def _pair(item: LemmaType, analyzer: LinguisticAnalyzer) -> LemmaPair:
