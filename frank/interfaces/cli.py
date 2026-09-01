@@ -15,6 +15,14 @@ from frank.application.annotate_chapter import (
     annotate_book,
     render_annotate_report,
 )
+from frank.application.build_termbase import (
+    TermbasePorts,
+    TranslatePorts,
+    build_termbase,
+    render_termbase_report,
+    render_translate_report,
+    translate_termbase,
+)
 from frank.application.ingest_book import (
     IngestPorts,
     IngestRequest,
@@ -25,6 +33,7 @@ from frank.application.ingest_book import (
 from frank.config import Settings, load_settings
 from frank.domain.model.annotation import GlossPlanConfig, SegmentationConfig
 from frank.domain.model.book import PassageGroupingConfig
+from frank.domain.model.termbase import TermCollectConfig
 from frank.infrastructure.llm.benchmark import (
     BenchPlan,
     load_gold_files,
@@ -33,9 +42,18 @@ from frank.infrastructure.llm.benchmark import (
 )
 from frank.infrastructure.llm.client import OpenAiChatClient, chat_client_from_settings
 from frank.infrastructure.nlp.lemma_arbiter import ArbiterConfig, SmartLemmaArbiter
-from frank.infrastructure.nlp.lexicon import FileLexicon, lexicon_path, load_gloss_lists
+from frank.infrastructure.nlp.lexicon import (
+    FileLexicon,
+    lexicon_path,
+    load_exonyms,
+    load_gloss_lists,
+)
 from frank.infrastructure.nlp.load import load_analyzer
 from frank.infrastructure.nlp.prefixes import load_inventory
+from frank.infrastructure.nlp.term_translator import (
+    SmartTermTranslator,
+    TranslateConfig,
+)
 from frank.infrastructure.persistence.cache import StepCache
 from frank.infrastructure.persistence.repositories import SqliteBookRepository
 from frank.infrastructure.persistence.tables import create_book_db
@@ -153,6 +171,18 @@ def annotate(
     typer.echo(render_annotate_report(report))
 
 
+@app.command()
+def terms(
+    slug: Annotated[str, typer.Argument(help="Book slug under books/")],
+    config: Annotated[Path, typer.Option("--config")] = Path("config.toml"),
+) -> None:
+    """Collect Term candidates and fill Ukrainian renderings (exonyms + SMART)."""
+    settings = load_settings(config)
+    collected = build_termbase(_termbase_ports(settings), slug, _term_config(settings))
+    translated = translate_termbase(_translate_ports(settings, slug), slug)
+    typer.echo(render_termbase_report(collected) + render_translate_report(translated))
+
+
 def _ports(settings: Settings) -> IngestPorts:
     return IngestPorts(
         fetcher=LocalFileFetcher(settings.languages.source),
@@ -212,6 +242,49 @@ def _grouping(settings: Settings) -> PassageGroupingConfig:
         min_chars=passage.min_chars,
         max_chars=passage.max_chars,
         dialogue_max_chars=passage.dialogue_max_chars,
+    )
+
+
+def _termbase_ports(_settings: Settings) -> TermbasePorts:
+    return TermbasePorts(
+        open_books=_open_books,
+        open_terms=_open_books,
+        lexicon_for=lambda lang: FileLexicon(lexicon_path(lang)),
+        lists_for=load_gloss_lists,
+    )
+
+
+def _term_config(settings: Settings) -> TermCollectConfig:
+    termbase = settings.termbase
+    return TermCollectConfig(
+        entity_min_occurrences=termbase.entity_min_occurrences,
+        unknown_lemma_min_count=termbase.unknown_lemma_min_count,
+        idiom_min_occurrences=termbase.idiom_min_occurrences,
+        merge_max_edit_distance=termbase.merge_max_edit_distance,
+        merge_min_stem_chars=termbase.merge_min_stem_chars,
+    )
+
+
+def _translate_ports(settings: Settings, slug: str) -> TranslatePorts:
+    return TranslatePorts(
+        open_books=_open_books,
+        open_terms=_open_books,
+        exonyms=load_exonyms,
+        translator=_term_translator(settings, slug),
+    )
+
+
+def _term_translator(settings: Settings, slug: str) -> SmartTermTranslator:
+    return SmartTermTranslator(
+        client=chat_client_from_settings(settings, _BOOKS_DIR / slug / "logs"),
+        config=TranslateConfig(
+            model=settings.smart.name,
+            base_url=settings.smart.base_url,
+            timeout_seconds=settings.budgets.llm_timeout_seconds,
+            batch_size=settings.termbase.translation_batch_size,
+            slug=slug,
+        ),
+        cache=StepCache(_BOOKS_DIR / slug / "cache"),
     )
 
 

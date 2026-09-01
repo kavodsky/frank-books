@@ -73,3 +73,26 @@ def test_german_case_feature_is_kept() -> None:
     tokens = annotate_paragraph(_paragraph("Der Arzt sah das Kind."), parsed).tokens
     assert tokens[0].morph.value_of("Case") == "Nom"
     assert tokens[0].lemma == "der"
+
+
+@pytest.mark.unit
+def test_ent_type_is_copied() -> None:
+    parsed = (
+        ParsedSentence(
+            index=1,
+            text="Oliver ging.",
+            tokens=(
+                ParsedToken(
+                    index=1,
+                    surface="Oliver",
+                    lemma="Oliver",
+                    upos="PROPN",
+                    morph=Morphology(),
+                    ent_type="PER",
+                ),
+                _token(2, "ging", "gehen", "VERB"),
+            ),
+        ),
+    )
+    tokens = annotate_paragraph(_paragraph("Oliver ging."), parsed).tokens
+    assert tokens[0].ent_type == "PER"

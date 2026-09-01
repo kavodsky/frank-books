@@ -36,6 +36,16 @@ class ReunionBatchResult(BaseModel):
     items: list[ReunionProposal]
 
 
+class TermProposal(BaseModel):
+    lemma: str
+    translation_uk: str
+    note: str
+
+
+class TermBatchResult(BaseModel):
+    items: list[TermProposal]
+
+
 def openai_strict_schema(schema: dict[str, object]) -> dict[str, object]:
     """Pydantic fields stay the source; OpenAI requires additionalProperties: false."""
     strict = _strict_node(schema)

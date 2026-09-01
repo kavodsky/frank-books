@@ -77,6 +77,15 @@ class PassageSettings(BaseModel):
     dialogue_max_chars: int = Field(ge=1)
 
 
+class TermbaseSettings(BaseModel):
+    entity_min_occurrences: int = Field(ge=1)
+    unknown_lemma_min_count: int = Field(ge=1)
+    idiom_min_occurrences: int = Field(ge=1)
+    merge_max_edit_distance: int = Field(ge=0)
+    merge_min_stem_chars: int = Field(ge=1)
+    translation_batch_size: int = Field(ge=1, le=200)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="forbid")
 
@@ -90,6 +99,7 @@ class Settings(BaseSettings):
     nlp: NlpSettings
     gloss: GlossSettings
     passage: PassageSettings
+    termbase: TermbaseSettings
 
 
 def load_settings(path: Path | None = None) -> Settings:

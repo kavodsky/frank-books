@@ -9,6 +9,7 @@ from frank.domain.model.book import BookStatus, BookStructure, Passage, Sentence
 from frank.domain.model.lemma import LemmaOverride
 from frank.domain.model.reunion import VerbParticle
 from frank.domain.model.run import Run, RunFailure, RunTally
+from frank.domain.model.termbase import Term
 
 
 class RunRepository(Protocol):
@@ -34,3 +35,8 @@ class BookRepository(Protocol):
         self, slug: str, overrides: tuple[LemmaOverride, ...]
     ) -> None: ...
     def get_overrides(self, slug: str) -> tuple[LemmaOverride, ...]: ...
+
+
+class TermbaseRepository(Protocol):
+    def replace_terms(self, slug: str, terms: tuple[Term, ...]) -> None: ...
+    def get_terms(self, slug: str) -> tuple[Term, ...]: ...

@@ -26,6 +26,7 @@ from frank.domain.model.book import (
 from frank.domain.model.lemma import LemmaOverride, LemmaSource
 from frank.domain.model.reunion import ReunionSource, VerbParticle
 from frank.domain.model.run import Run, RunStatus
+from frank.domain.model.termbase import Term, TermKind
 from frank.infrastructure.persistence.tables import (
     BookRow,
     ChapterRow,
@@ -36,6 +37,7 @@ from frank.infrastructure.persistence.tables import (
     RunRow,
     SenseUnitRow,
     SentenceRow,
+    TermRow,
     TokenRow,
     VerbParticleRow,
 )
@@ -188,6 +190,7 @@ def token_from_row(row: TokenRow) -> Token:
         dep=row.dep,
         head_index=row.head_index,
         reunited_lemma=row.reunited_lemma,
+        ent_type=row.ent_type,
     )
 
 
@@ -203,6 +206,7 @@ def row_from_token(token: Token) -> TokenRow:
         dep=token.dep,
         head_index=token.head_index,
         reunited_lemma=token.reunited_lemma,
+        ent_type=token.ent_type,
     )
 
 
@@ -288,4 +292,31 @@ def row_from_particle(item: VerbParticle) -> VerbParticleRow:
         verb_token_id=item.verb_token_id,
         reunited_lemma=item.reunited_lemma,
         source=item.source.value,
+    )
+
+
+def term_from_row(row: TermRow) -> Term:
+    surfaces = json.loads(row.surface_forms_json)
+    return Term(
+        id=row.id,
+        book_id=row.book_id,
+        kind=TermKind(row.kind),
+        surface_forms=tuple(surfaces),
+        lemma=row.lemma,
+        translation_uk=row.translation_uk,
+        note=row.note,
+        approved=row.approved,
+    )
+
+
+def row_from_term(term: Term) -> TermRow:
+    return TermRow(
+        id=term.id,
+        book_id=term.book_id,
+        kind=term.kind.value,
+        surface_forms_json=json.dumps(list(term.surface_forms), ensure_ascii=False),
+        lemma=term.lemma,
+        translation_uk=term.translation_uk,
+        note=term.note,
+        approved=term.approved,
     )

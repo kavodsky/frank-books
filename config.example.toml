@@ -60,3 +60,11 @@ rare_morph_max_count = 2
 min_chars = 800
 max_chars = 1500
 dialogue_max_chars = 160
+
+[termbase]
+entity_min_occurrences = 3
+unknown_lemma_min_count = 5
+idiom_min_occurrences = 1
+merge_max_edit_distance = 2
+merge_min_stem_chars = 4
+translation_batch_size = 20

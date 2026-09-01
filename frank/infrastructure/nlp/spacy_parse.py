@@ -47,6 +47,7 @@ def _parsed_token(token: Token, index: int, index_of: dict[int, int]) -> ParsedT
         morph=_morphology(token),
         dep=token.dep_ or "",
         head_index=_head_index(token, index_of),
+        ent_type=token.ent_type_ or "",
     )
 
 

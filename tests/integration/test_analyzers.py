@@ -106,6 +106,21 @@ def test_german_lg_tokens_carry_lemma_upos_and_case() -> None:
 
 @pytest.mark.integration
 @pytest.mark.skipif(
+    not _has_model("de_core_news_lg"), reason="de_core_news_lg not installed"
+)
+def test_german_lg_tags_person_and_place() -> None:
+    parsed = GermanAnalyzer(spacy.load("de_core_news_lg")).analyze(
+        "Dr. Müller fuhr nach Berlin."
+    )
+    tokens = parsed[0].tokens
+    person = next(token for token in tokens if token.surface == "Müller")
+    place = next(token for token in tokens if token.surface == "Berlin")
+    assert person.ent_type in {"PER", "PERSON"}
+    assert place.ent_type in {"LOC", "GPE", "PLACE"}
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
     not _has_model("hu_core_news_lg"), reason="hu_core_news_lg not installed"
 )
 def test_hungarian_lg_keeps_abbreviation_in_one_sentence() -> None:

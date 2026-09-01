@@ -35,6 +35,10 @@ def test_example_config_loads(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.passage.min_chars == 800
     assert settings.passage.max_chars == 1500
     assert settings.passage.dialogue_max_chars == 160
+    assert settings.termbase.entity_min_occurrences == 3
+    assert settings.termbase.unknown_lemma_min_count == 5
+    assert settings.termbase.merge_max_edit_distance == 2
+    assert settings.termbase.translation_batch_size == 20
     assert settings.fast.api_key is None
     assert settings.smart.api_key is None
 

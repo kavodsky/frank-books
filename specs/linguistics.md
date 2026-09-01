@@ -13,8 +13,8 @@ prompt template) — noted in brackets.
 ## 1. Proper names
 
 **Principle:** transliterate, do not localize; keep one rendering per name for the
-whole book (enforced by the termbase, roadmap 3.2). [`prompts/term_translation`,
-validated in `domain/services/validation.py`]
+whole book (enforced by the termbase, roadmap 3.2). [`prompts/term_translate.j2`;
+exonyms applied in `domain/services/term_renderings.py`]
 
 - Localize only where a Ukrainian conventional form exists: `Wien → Відень`,
   `München → Мюнхен`, `Duna → Дунай`. Conventional forms are listed in
@@ -202,6 +202,20 @@ Conservative opener heuristic: after strip, the paragraph is at most
 `dialogue_max_chars` and starts with `— – - « » „ “ " '`. Short non-speech
 (`Ja.` / `Igen.`) packs by the ordinary char budget.
 
+## 14. Term candidates
+
+[`domain/services/term_candidates.py`, roadmap 3.1]
+
+Analyzer NER labels become Term kinds: `PER`/`PERSON` → PERSON, `LOC`/`GPE`/`FAC`
+→ PLACE, `ORG` → ORG. Consecutive same-kind tokens in one sentence are one
+mention (`Oliver Twist`). Variants merge when lemmas match, one is a prefix of
+the other (`Budapesten` → `Budapest`, `Olivers` → `Oliver`), or they share a
+stem of `merge_min_stem_chars` and Levenshtein distance ≤ `merge_max_edit_distance`.
+Nicknames stay apart (`Sanyi` ≠ `Sándor`). PERSON/PLACE/ORG persist only at
+`entity_min_occurrences`. High-frequency book lemmas absent from the frequency
+lexicon (NOUN/VERB/ADJ) become DISAMBIG. Idiom candidates come from the static
+idiom list (empty until lists exist), not from the LLM.
+
 ---
 
 ## Open questions
@@ -233,3 +247,9 @@ and note it.
   enough, or must the paragraph also look like turn-taking (no narrator verb)?
   Conservative: opener + `dialogue_max_chars` only; short `Ja.` / `Igen.` without
   an opener is not a dialogue run.
+- spaCy `MISC` (and other unmapped NER labels): keep as terms, or drop? Conservative:
+  drop. PERSON/PLACE/ORG only.
+- Multiword idiom detection without a list (collocations, noun chunks)? Conservative:
+  only phrases already in `GlossLists.idioms` (empty until a committed list exists).
+- Does SMART term translation set `approved=true`? Conservative: no — 3.6 is the
+  human gate; 3.2 only fills `translation_uk` and `note`.

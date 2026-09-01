@@ -33,6 +33,7 @@ process-compose up                   # model servers + dagster
 uv run frank ingest path/to/book.html --slug pecsenye --lang hu
 uv run frank inspect pecsenye                    # sanity report; fix book.toml if needed
 uv run frank annotate pecsenye                   # sentences, tokens, lemmas, particles
+uv run frank terms pecsenye                      # NER candidates + Ukrainian renderings
 # morphology + analysis: later roadmap steps, then Dagster for generation
 uv run frank review-terms pecsenye > terms.toml   # export termbase + characters
 $EDITOR terms.toml                              # ~15 min: check names, genders, T/V

@@ -7,6 +7,7 @@ from typing import Protocol
 from frank.domain.model.annotation import ParsedSentence
 from frank.domain.model.lemma import DisputedLemma, LemmaOverride
 from frank.domain.model.reunion import ReunionCandidate, VerbParticle
+from frank.domain.model.termbase import Term, TermRendering
 
 
 class LinguisticAnalyzer(Protocol):
@@ -25,3 +26,9 @@ class LemmaArbiter(Protocol):
     def decide_reunions(
         self, pending: tuple[ReunionCandidate, ...]
     ) -> tuple[VerbParticle, ...]: ...
+
+
+class TermTranslator(Protocol):
+    def propose(
+        self, terms: tuple[Term, ...], lang: str
+    ) -> tuple[TermRendering, ...]: ...

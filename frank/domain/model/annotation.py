@@ -39,6 +39,7 @@ class ParsedToken(BaseModel):
     morph: Morphology
     dep: str = ""
     head_index: int = 0
+    ent_type: str = ""
 
 
 class ParsedSentence(BaseModel):
@@ -62,6 +63,7 @@ class Token(BaseModel):
     dep: str = ""
     head_index: int = 0
     reunited_lemma: str | None = None
+    ent_type: str = ""
 
 
 class SenseUnit(BaseModel):

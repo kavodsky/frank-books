@@ -1,0 +1,11 @@
+# Conventional Ukrainian place and person forms (linguistics §1).
+# Keys are source lemmas; loaders casefold them. Anything absent is transliterated.
+
+[place]
+Wien = "Відень"
+"München" = "Мюнхен"
+Berlin = "Берлін"
+Duna = "Дунай"
+Budapest = "Будапешт"
+
+[person]

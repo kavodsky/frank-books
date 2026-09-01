@@ -96,6 +96,8 @@ frank-books/
         segmentation.py    # sense-unit rules over Token dep/head (no spaCy)
         gloss_planning.py  # the stateful first-occurrence / quota algorithm
         passage_grouping.py
+        term_candidates.py
+        term_renderings.py
         reunification.py   # separable verb / igekötő pairing rules
         context_assembly.py# budgeted assembly (Phase 4) — pure function
         validation.py      # all Phase 5.2 predicates, pure
@@ -140,7 +142,7 @@ frank-books/
         macos.py
 
     interfaces/        # entry points. Thin. No logic
-      cli.py           # Typer: ingest, inspect, annotate, review-terms, approve, render, status, report, bench
+      cli.py           # Typer: ingest, inspect, annotate, terms, review-terms, approve, render, status, report, bench
       dagster_defs.py  # assets, asset checks, resources, RetryPolicy — calls application use cases
 
     config.py        # pydantic-settings
@@ -157,6 +159,8 @@ Tests mirror the layers, so a failing path tells you which layer broke:
       test_reunification.py
       test_segmentation.py
       test_passage_grouping.py
+      test_term_candidates.py
+      test_term_renderings.py
     integration/     # infrastructure against real SQLite / a mocked LLM server
       test_repositories.py
       test_llm_generator.py

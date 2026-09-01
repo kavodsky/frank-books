@@ -7,6 +7,7 @@ from pathlib import Path
 
 from frank.domain.errors import UnknownError
 from frank.domain.model.annotation import GlossLists
+from frank.domain.model.termbase import Exonym
 
 _REPO_DATA = Path(__file__).resolve().parents[3] / "data"
 
@@ -71,4 +72,34 @@ def load_false_friends(path: Path) -> tuple[str, ...]:
             continue
         seen.add(folded)
         found.append(folded)
+    return tuple(found)
+
+
+def exonyms_path() -> Path:
+    return _REPO_DATA / "uk_exonyms.toml"
+
+
+def load_exonyms(path: Path | None = None) -> tuple[Exonym, ...]:
+    resolved = exonyms_path() if path is None else path
+    if not resolved.is_file():
+        raise UnknownError(f"exonym list not found: {resolved}")
+    payload = tomllib.loads(resolved.read_text(encoding="utf-8"))
+    found: list[Exonym] = []
+    seen: set[str] = set()
+    for table in ("place", "person"):
+        found.extend(_exonyms_from_table(payload.get(table, {}), seen))
+    return tuple(found)
+
+
+def _exonyms_from_table(table: object, seen: set[str]) -> tuple[Exonym, ...]:
+    if not isinstance(table, dict):
+        raise UnknownError("exonym table must be a map of lemma to Ukrainian")
+    found: list[Exonym] = []
+    for raw_lemma, raw_uk in table.items():
+        lemma = str(raw_lemma).casefold().strip()
+        uk = str(raw_uk).strip()
+        if not lemma or not uk or lemma in seen:
+            continue
+        seen.add(lemma)
+        found.append(Exonym(lemma=lemma, translation_uk=uk))
     return tuple(found)

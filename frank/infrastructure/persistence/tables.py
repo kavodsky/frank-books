@@ -81,6 +81,7 @@ class TokenRow(Base):
     dep: Mapped[str] = mapped_column(String, default="")
     head_index: Mapped[int] = mapped_column(default=0)
     reunited_lemma: Mapped[str | None] = mapped_column(String, nullable=True)
+    ent_type: Mapped[str] = mapped_column(String, default="")
 
 
 class LemmaOverrideRow(Base):

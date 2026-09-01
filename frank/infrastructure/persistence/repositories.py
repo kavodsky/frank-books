@@ -15,6 +15,7 @@ from frank.domain.model.book import BookStatus, BookStructure, Passage, Sentence
 from frank.domain.model.lemma import LemmaOverride
 from frank.domain.model.reunion import VerbParticle
 from frank.domain.model.run import Run, RunFailure, RunStatus, RunTally
+from frank.domain.model.termbase import Term
 from frank.infrastructure.persistence.mappers import (
     book_from_row,
     chapter_from_row,
@@ -33,10 +34,12 @@ from frank.infrastructure.persistence.mappers import (
     row_from_run,
     row_from_sense_unit,
     row_from_sentence,
+    row_from_term,
     row_from_token,
     run_from_row,
     sense_unit_from_row,
     sentence_from_row,
+    term_from_row,
     token_from_row,
 )
 from frank.infrastructure.persistence.tables import (
@@ -49,6 +52,7 @@ from frank.infrastructure.persistence.tables import (
     RunRow,
     SenseUnitRow,
     SentenceRow,
+    TermRow,
     TokenRow,
     VerbParticleRow,
 )
@@ -318,6 +322,23 @@ class SqliteBookRepository:
             ).all()
             return tuple(override_from_row(row) for row in rows)
 
+    def replace_terms(self, slug: str, terms: tuple[Term, ...]) -> None:
+        with Session(self._engine) as session:
+            _book_id(session, slug)
+            session.execute(delete(TermRow))
+            session.add_all([row_from_term(item) for item in terms])
+            session.commit()
+
+    def get_terms(self, slug: str) -> tuple[Term, ...]:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            rows = session.scalars(
+                select(TermRow)
+                .where(TermRow.book_id == book_id)
+                .order_by(TermRow.kind, TermRow.lemma)
+            ).all()
+            return tuple(term_from_row(row) for row in rows)
+
 
 def _set_passage_ids(session: Session, structure: BookStructure) -> None:
     for paragraph in structure.paragraphs:
@@ -334,6 +355,7 @@ def _wipe_book(session: Session, slug: str) -> None:
         return
     _delete_sentences(session, book.id)
     session.execute(delete(LemmaOverrideRow))
+    session.execute(delete(TermRow))
     chapter_ids = session.scalars(
         select(ChapterRow.id).where(ChapterRow.book_id == book.id)
     ).all()

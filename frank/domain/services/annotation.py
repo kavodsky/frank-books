@@ -45,6 +45,7 @@ def _tokens_for_sentence(
             morph=token.morph,
             dep=token.dep,
             head_index=token.head_index,
+            ent_type=token.ent_type,
         )
         for token in parsed
     )
