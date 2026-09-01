@@ -7,7 +7,7 @@ from pathlib import Path
 
 from frank.domain.errors import UnknownError
 from frank.domain.model.annotation import GlossLists
-from frank.domain.model.termbase import Exonym
+from frank.domain.model.termbase import AddressCues, Exonym
 
 _REPO_DATA = Path(__file__).resolve().parents[3] / "data"
 
@@ -20,6 +20,13 @@ class FileLexicon:
 
     def contains(self, form: str) -> bool:
         return form.casefold() in self._forms
+
+
+def load_gender_cues(lang: str) -> frozenset[str]:
+    path = _REPO_DATA / f"{lang}_gender_cues.txt"
+    if not path.is_file():
+        raise UnknownError(f"gender-cue list not found: {path}")
+    return load_forms(path)
 
 
 def lexicon_path(lang: str) -> Path:
@@ -72,6 +79,37 @@ def load_false_friends(path: Path) -> tuple[str, ...]:
             continue
         seen.add(folded)
         found.append(folded)
+    return tuple(found)
+
+
+def load_address_cues(lang: str) -> AddressCues:
+    path = _REPO_DATA / "address_cues.toml"
+    if not path.is_file():
+        raise UnknownError(f"address-cue list not found: {path}")
+    payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    table = payload.get(lang)
+    if not isinstance(table, dict):
+        raise UnknownError(f"address cues missing language: {lang}")
+    return AddressCues(
+        t_lemmas=_string_tuple(table.get("t_lemmas"), "t_lemmas"),
+        v_lemmas=_string_tuple(table.get("v_lemmas"), "v_lemmas"),
+        v_surfaces=_string_tuple(table.get("v_surfaces"), "v_surfaces"),
+        speech_lemmas=_string_tuple(table.get("speech_lemmas"), "speech_lemmas"),
+    )
+
+
+def _string_tuple(raw: object, field: str) -> tuple[str, ...]:
+    if not isinstance(raw, list):
+        raise UnknownError(f"address cue {field} must be an array")
+    found: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        value = str(item).strip()
+        key = value.casefold() if field != "v_surfaces" else value
+        if not value or key in seen:
+            continue
+        seen.add(key)
+        found.append(value.casefold() if field != "v_surfaces" else value)
     return tuple(found)
 
 

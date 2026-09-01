@@ -39,6 +39,10 @@ def test_example_config_loads(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.termbase.unknown_lemma_min_count == 5
     assert settings.termbase.merge_max_edit_distance == 2
     assert settings.termbase.translation_batch_size == 20
+    assert settings.termbase.evidence_sentences_per_person == 3
+    assert settings.termbase.character_map_batch_size == 10
+    assert settings.termbase.evidence_sentences_per_pair == 3
+    assert settings.termbase.address_map_batch_size == 10
     assert settings.fast.api_key is None
     assert settings.smart.api_key is None
 

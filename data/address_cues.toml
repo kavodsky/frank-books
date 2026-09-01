@@ -1,0 +1,38 @@
+# Closed T/V and speech-verb cues for the address matrix (roadmap 3.4).
+
+[de]
+t_lemmas = ["du", "dich", "dir", "dein", "deine", "deiner", "deinem", "deinen", "deines"]
+v_lemmas = ["sie", "ihnen", "ihr"]
+v_surfaces = ["Sie", "Ihnen", "Ihrer"]
+speech_lemmas = [
+    "sagen",
+    "fragen",
+    "rufen",
+    "erwidern",
+    "antworten",
+    "bemerken",
+    "flüstern",
+    "schreien",
+    "fortfahren",
+    "reden",
+    "anreden",
+    "unterbrechen",
+    "entgegnen",
+    "versetzen",
+    "wiederholen",
+    "beginnen",
+]
+
+[hu]
+t_lemmas = ["te", "téged", "neked", "tied", "tiéd", "tőled"]
+v_lemmas = ["ön", "önt", "önnek", "maga", "magát", "magának", "tetszik"]
+v_surfaces = []
+speech_lemmas = [
+    "mond",
+    "kérdez",
+    "kiált",
+    "válaszol",
+    "felel",
+    "szól",
+    "suttog",
+]

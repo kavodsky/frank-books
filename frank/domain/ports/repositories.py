@@ -9,7 +9,7 @@ from frank.domain.model.book import BookStatus, BookStructure, Passage, Sentence
 from frank.domain.model.lemma import LemmaOverride
 from frank.domain.model.reunion import VerbParticle
 from frank.domain.model.run import Run, RunFailure, RunTally
-from frank.domain.model.termbase import Term
+from frank.domain.model.termbase import AddressPair, Character, Term
 
 
 class RunRepository(Protocol):
@@ -40,3 +40,11 @@ class BookRepository(Protocol):
 class TermbaseRepository(Protocol):
     def replace_terms(self, slug: str, terms: tuple[Term, ...]) -> None: ...
     def get_terms(self, slug: str) -> tuple[Term, ...]: ...
+    def replace_characters(
+        self, slug: str, characters: tuple[Character, ...]
+    ) -> None: ...
+    def get_characters(self, slug: str) -> tuple[Character, ...]: ...
+    def replace_address_pairs(
+        self, slug: str, pairs: tuple[AddressPair, ...]
+    ) -> None: ...
+    def get_address_pairs(self, slug: str) -> tuple[AddressPair, ...]: ...

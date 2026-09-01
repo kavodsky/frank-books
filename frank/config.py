@@ -84,6 +84,10 @@ class TermbaseSettings(BaseModel):
     merge_max_edit_distance: int = Field(ge=0)
     merge_min_stem_chars: int = Field(ge=1)
     translation_batch_size: int = Field(ge=1, le=200)
+    evidence_sentences_per_person: int = Field(ge=1, le=20)
+    character_map_batch_size: int = Field(ge=1, le=50)
+    evidence_sentences_per_pair: int = Field(ge=1, le=20)
+    address_map_batch_size: int = Field(ge=1, le=50)
 
 
 class Settings(BaseSettings):

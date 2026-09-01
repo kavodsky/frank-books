@@ -253,19 +253,21 @@ Steps:
   rendering + short note. Names: transliterate per Ukrainian orthography rules
   (§ German/Hungarian onomastics); never localize unless conventional
   (e.g. `Wien → Відень`). Output per the `TermProposal` Pydantic contract.
-- **3.3 Character registry (SMART model, map-reduce).** Chapter-by-chapter pass
-  extracting characters, genders, roles, aliases; reduce step merges into
-  `character` rows. Gender is REQUIRED (Ukrainian past-tense verbs and adjectives
-  are gendered; wrong gender ruins the whole book).
-- **3.4 Address matrix.** From dialogue: detect pronouns/verb forms of address
-  (de: du/Sie; hu: te/ön/maga/tetszik-form) per speaker→addressee pair; store
-  `address_pair` with T/V. Heuristics first (regex on dialogue spans + attribution),
-  SMART model only for unresolved pairs. NOTE for implementers: literary speaker
-  attribution is genuinely hard — do NOT aim for full coverage. Pairs that stay
-  unresolved get tv_form=MIXED, and for them the generation prompt carries a
-  scene-level directive ("address forms in this dialogue: follow the source's
-  du/Sie / te/ön verb forms directly") instead of a pair rule. The matrix is an
-  optimization for the clear cases, not a hard dependency.
+- **3.3 Character registry (SMART model, map-reduce).** Chapter-by-chapter map
+  over PERSON terms that occur in the chapter plus
+  `evidence_sentences_per_person` sentences each (prefer closed gender-cue
+  hits); never send chapter text (ADR 0015). SMART returns canonical name,
+  gender, aliases, role. Deterministic reduce merges drafts that share a lemma,
+  canonical name, or alias. Gender is REQUIRED for generation (Ukrainian
+  past-tense verbs and adjectives are gendered); unresolved gender is stored as
+  `unknown` for 3.6, never guessed.
+- **3.4 Address matrix.** Heuristics first on speech-opener paragraphs: T/V from
+  closed cue lists, speaker after a speech verb, addressee as vocative
+  (ADR 0016). SMART only when both endpoints are known and the form is not.
+  Evidence is `evidence_sentences_per_pair` sentences, never the chapter.
+  Unanswered or mixed T+V → `tv_form=MIXED`. Do not aim for full coverage;
+  unidentified speakers are dropped. Generation later carries a scene-level
+  directive for MIXED pairs instead of a pair rule.
 - **3.5 Chapter summaries + book style card.** Per chapter: 3–5 sentence Ukrainian
   summary (map). Book style card (reduce): epoch, setting, register, narration
   person/tense, tone, translation directives (e.g. "archaic flavour, but glosses in

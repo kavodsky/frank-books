@@ -1,0 +1,13 @@
+One character per input lemma. Do not invent people who are not in the input.
+If two lemmas are the same person, reuse the same canonical_name and put the
+other form in aliases (Hungarian Sanyi → canonical Sándor, alias Sanyi;
+German Gretel → Margarete). Gender is female, male, or unknown. Hungarian ő
+is not a gender cue. If the evidence has no title or gendered word (Frau, úr,
+lány), return unknown — do not guess. German das Mädchen is still female.
+Keep the given Ukrainian rendering when present. role_note is a short Ukrainian
+phrase (who they are in this chapter), empty if unclear.
+Return JSON with an `items` array of
+`{lemma, canonical_name, translation_uk, gender, aliases, role_note}`.
+Source language: {{ lang }}
+
+{{ batch_json }}

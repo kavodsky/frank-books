@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from frank.domain.errors import SchemaInvalid
@@ -44,6 +46,29 @@ class TermProposal(BaseModel):
 
 class TermBatchResult(BaseModel):
     items: list[TermProposal]
+
+
+class CharacterProposal(BaseModel):
+    lemma: str
+    canonical_name: str
+    translation_uk: str
+    gender: Literal["female", "male", "unknown"]
+    aliases: list[str]
+    role_note: str
+
+
+class CharacterBatchResult(BaseModel):
+    items: list[CharacterProposal]
+
+
+class AddressProposal(BaseModel):
+    speaker_id: str
+    addressee_id: str
+    tv_form: Literal["T", "V", "MIXED"]
+
+
+class AddressBatchResult(BaseModel):
+    items: list[AddressProposal]
 
 
 def openai_strict_schema(schema: dict[str, object]) -> dict[str, object]:

@@ -1,0 +1,12 @@
+# Closed gender/title cues for character-evidence ranking (roadmap 3.3).
+úr
+asszony
+kisasszony
+lány
+fiú
+király
+királynő
+herceg
+hercegnő
+bácsi
+néni

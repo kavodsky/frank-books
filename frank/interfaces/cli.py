@@ -15,6 +15,16 @@ from frank.application.annotate_chapter import (
     annotate_book,
     render_annotate_report,
 )
+from frank.application.build_address import (
+    AddressPorts,
+    build_address_matrix,
+    render_address_report,
+)
+from frank.application.build_characters import (
+    CharacterPorts,
+    build_character_registry,
+    render_character_report,
+)
 from frank.application.build_termbase import (
     TermbasePorts,
     TranslatePorts,
@@ -33,7 +43,11 @@ from frank.application.ingest_book import (
 from frank.config import Settings, load_settings
 from frank.domain.model.annotation import GlossPlanConfig, SegmentationConfig
 from frank.domain.model.book import PassageGroupingConfig
-from frank.domain.model.termbase import TermCollectConfig
+from frank.domain.model.termbase import (
+    AddressMatrixConfig,
+    CharacterEvidenceConfig,
+    TermCollectConfig,
+)
 from frank.infrastructure.llm.benchmark import (
     BenchPlan,
     load_gold_files,
@@ -41,11 +55,18 @@ from frank.infrastructure.llm.benchmark import (
     run_benchmark,
 )
 from frank.infrastructure.llm.client import OpenAiChatClient, chat_client_from_settings
+from frank.infrastructure.nlp.address_resolver import (
+    ResolveConfig,
+    SmartAddressResolver,
+)
+from frank.infrastructure.nlp.character_mapper import MapConfig, SmartCharacterMapper
 from frank.infrastructure.nlp.lemma_arbiter import ArbiterConfig, SmartLemmaArbiter
 from frank.infrastructure.nlp.lexicon import (
     FileLexicon,
     lexicon_path,
+    load_address_cues,
     load_exonyms,
+    load_gender_cues,
     load_gloss_lists,
 )
 from frank.infrastructure.nlp.load import load_analyzer
@@ -176,11 +197,22 @@ def terms(
     slug: Annotated[str, typer.Argument(help="Book slug under books/")],
     config: Annotated[Path, typer.Option("--config")] = Path("config.toml"),
 ) -> None:
-    """Collect Term candidates and fill Ukrainian renderings (exonyms + SMART)."""
+    """Collect terms, characters, and the T/V address matrix."""
     settings = load_settings(config)
     collected = build_termbase(_termbase_ports(settings), slug, _term_config(settings))
     translated = translate_termbase(_translate_ports(settings, slug), slug)
-    typer.echo(render_termbase_report(collected) + render_translate_report(translated))
+    characters = build_character_registry(
+        _character_ports(settings, slug), slug, _character_config(settings)
+    )
+    addresses = build_address_matrix(
+        _address_ports(settings, slug), slug, _address_config(settings)
+    )
+    typer.echo(
+        render_termbase_report(collected)
+        + render_translate_report(translated)
+        + render_character_report(characters)
+        + render_address_report(addresses)
+    )
 
 
 def _ports(settings: Settings) -> IngestPorts:
@@ -282,6 +314,64 @@ def _term_translator(settings: Settings, slug: str) -> SmartTermTranslator:
             base_url=settings.smart.base_url,
             timeout_seconds=settings.budgets.llm_timeout_seconds,
             batch_size=settings.termbase.translation_batch_size,
+            slug=slug,
+        ),
+        cache=StepCache(_BOOKS_DIR / slug / "cache"),
+    )
+
+
+def _character_ports(settings: Settings, slug: str) -> CharacterPorts:
+    return CharacterPorts(
+        open_books=_open_books,
+        open_terms=_open_books,
+        gender_cues=load_gender_cues,
+        mapper=_character_mapper(settings, slug),
+    )
+
+
+def _character_config(settings: Settings) -> CharacterEvidenceConfig:
+    return CharacterEvidenceConfig(
+        evidence_sentences_per_person=settings.termbase.evidence_sentences_per_person
+    )
+
+
+def _character_mapper(settings: Settings, slug: str) -> SmartCharacterMapper:
+    return SmartCharacterMapper(
+        client=chat_client_from_settings(settings, _BOOKS_DIR / slug / "logs"),
+        config=MapConfig(
+            model=settings.smart.name,
+            base_url=settings.smart.base_url,
+            timeout_seconds=settings.budgets.llm_timeout_seconds,
+            batch_size=settings.termbase.character_map_batch_size,
+            slug=slug,
+        ),
+        cache=StepCache(_BOOKS_DIR / slug / "cache"),
+    )
+
+
+def _address_ports(settings: Settings, slug: str) -> AddressPorts:
+    return AddressPorts(
+        open_books=_open_books,
+        open_terms=_open_books,
+        cues_for=load_address_cues,
+        resolver=_address_resolver(settings, slug),
+    )
+
+
+def _address_config(settings: Settings) -> AddressMatrixConfig:
+    return AddressMatrixConfig(
+        evidence_sentences_per_pair=settings.termbase.evidence_sentences_per_pair
+    )
+
+
+def _address_resolver(settings: Settings, slug: str) -> SmartAddressResolver:
+    return SmartAddressResolver(
+        client=chat_client_from_settings(settings, _BOOKS_DIR / slug / "logs"),
+        config=ResolveConfig(
+            model=settings.smart.name,
+            base_url=settings.smart.base_url,
+            timeout_seconds=settings.budgets.llm_timeout_seconds,
+            batch_size=settings.termbase.address_map_batch_size,
             slug=slug,
         ),
         cache=StepCache(_BOOKS_DIR / slug / "cache"),

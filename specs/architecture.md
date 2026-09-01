@@ -60,6 +60,9 @@ frank-books/
     de_ambiguous_prefixes.txt
     hu_igekoto.txt
     uk_exonyms.toml          # conventional Ukrainian place/person forms
+    de_gender_cues.txt       # titles/pronouns that rank character evidence
+    hu_gender_cues.txt
+    address_cues.toml        # T/V pronouns and speech verbs (roadmap 3.4)
     uk_calques.toml          # Russian-calque blacklist (validation)
     de_false_friends.toml
     hu_false_friends.toml
@@ -90,7 +93,7 @@ frank-books/
         annotation.py  #   Token, Morphology, SenseUnit, GlossDecision
         reunion.py     #   VerbParticle, PrefixInventory, ReunionCandidate
         frank.py       #   FrankRecord, SenseUnitTranslation, WordNote
-        termbase.py    #   Term, Character, AddressForm, StyleCard
+        termbase.py    #   Term, Character, AddressPair, TvForm, StyleCard
         context.py     #   PromptContext and its budget sections
       services/        # pure domain logic — the real value of this layer
         segmentation.py    # sense-unit rules over Token dep/head (no spaCy)
@@ -98,6 +101,10 @@ frank-books/
         passage_grouping.py
         term_candidates.py
         term_renderings.py
+        character_evidence.py
+        character_merge.py
+        address_detect.py
+        address_merge.py
         reunification.py   # separable verb / igekötő pairing rules
         context_assembly.py# budgeted assembly (Phase 4) — pure function
         validation.py      # all Phase 5.2 predicates, pure
@@ -111,6 +118,8 @@ frank-books/
       ingest_book.py
       annotate_chapter.py
       build_termbase.py
+      build_characters.py
+      build_address.py
       generate_passages.py     # takes a budget, loops passages, calls validation
       render_book.py
       review_termbase.py
@@ -133,6 +142,9 @@ frank-books/
         hungarian.py         # HuSpaCy + emmorph -> ParsedSentence VOs
         lemma_arbiter.py     # dual-lemmatizer + batched LLM arbitration
         reunion_arbiter.py   # separable-verb / igekötő SMART validation
+        term_translator.py   # batched SMART term renderings
+        character_mapper.py  # SMART map of PERSON evidence → Character drafts
+        address_resolver.py  # SMART T/V for unresolved AddressPair rows
         prefixes.py          # closed particle lists from data/
       sources/
         txt.py, html.py, epub.py   # local files only (ADR 0013)
@@ -161,10 +173,18 @@ Tests mirror the layers, so a failing path tells you which layer broke:
       test_passage_grouping.py
       test_term_candidates.py
       test_term_renderings.py
+      test_character_evidence.py
+      test_character_merge.py
+      test_address_detect.py
+      test_address_merge.py
     integration/     # infrastructure against real SQLite / a mocked LLM server
       test_repositories.py
       test_llm_generator.py
       test_ingest.py
+      test_termbase.py
+      test_term_translate.py
+      test_character_map.py
+      test_address_matrix.py
     e2e/             # one fixture chapter through the whole pipeline
       test_fixture_chapter.py
     architecture/

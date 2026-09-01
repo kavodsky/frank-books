@@ -7,7 +7,14 @@ from typing import Protocol
 from frank.domain.model.annotation import ParsedSentence
 from frank.domain.model.lemma import DisputedLemma, LemmaOverride
 from frank.domain.model.reunion import ReunionCandidate, VerbParticle
-from frank.domain.model.termbase import Term, TermRendering
+from frank.domain.model.termbase import (
+    AddressPair,
+    ChapterEvidence,
+    CharacterDraft,
+    Term,
+    TermRendering,
+    UnresolvedPair,
+)
 
 
 class LinguisticAnalyzer(Protocol):
@@ -32,3 +39,15 @@ class TermTranslator(Protocol):
     def propose(
         self, terms: tuple[Term, ...], lang: str
     ) -> tuple[TermRendering, ...]: ...
+
+
+class CharacterMapper(Protocol):
+    def map_chapter(
+        self, evidence: ChapterEvidence, lang: str
+    ) -> tuple[CharacterDraft, ...]: ...
+
+
+class AddressResolver(Protocol):
+    def resolve(
+        self, pairs: tuple[UnresolvedPair, ...], lang: str
+    ) -> tuple[AddressPair, ...]: ...

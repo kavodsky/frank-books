@@ -15,17 +15,21 @@ from frank.domain.model.book import BookStatus, BookStructure, Passage, Sentence
 from frank.domain.model.lemma import LemmaOverride
 from frank.domain.model.reunion import VerbParticle
 from frank.domain.model.run import Run, RunFailure, RunStatus, RunTally
-from frank.domain.model.termbase import Term
+from frank.domain.model.termbase import AddressPair, Character, Term
 from frank.infrastructure.persistence.mappers import (
+    address_pair_from_row,
     book_from_row,
     chapter_from_row,
+    character_from_row,
     gloss_decision_from_row,
     override_from_row,
     paragraph_from_row,
     particle_from_row,
     passage_from_row,
+    row_from_address_pair,
     row_from_book,
     row_from_chapter,
+    row_from_character,
     row_from_gloss_decision,
     row_from_override,
     row_from_paragraph,
@@ -43,8 +47,10 @@ from frank.infrastructure.persistence.mappers import (
     token_from_row,
 )
 from frank.infrastructure.persistence.tables import (
+    AddressPairRow,
     BookRow,
     ChapterRow,
+    CharacterRow,
     GlossPlanRow,
     LemmaOverrideRow,
     ParagraphRow,
@@ -339,6 +345,41 @@ class SqliteBookRepository:
             ).all()
             return tuple(term_from_row(row) for row in rows)
 
+    def replace_characters(self, slug: str, characters: tuple[Character, ...]) -> None:
+        with Session(self._engine) as session:
+            _book_id(session, slug)
+            session.execute(delete(AddressPairRow))
+            session.execute(delete(CharacterRow))
+            session.add_all([row_from_character(item) for item in characters])
+            session.commit()
+
+    def get_characters(self, slug: str) -> tuple[Character, ...]:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            rows = session.scalars(
+                select(CharacterRow)
+                .where(CharacterRow.book_id == book_id)
+                .order_by(CharacterRow.canonical_name)
+            ).all()
+            return tuple(character_from_row(row) for row in rows)
+
+    def replace_address_pairs(self, slug: str, pairs: tuple[AddressPair, ...]) -> None:
+        with Session(self._engine) as session:
+            _book_id(session, slug)
+            session.execute(delete(AddressPairRow))
+            session.add_all([row_from_address_pair(item) for item in pairs])
+            session.commit()
+
+    def get_address_pairs(self, slug: str) -> tuple[AddressPair, ...]:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            rows = session.scalars(
+                select(AddressPairRow)
+                .where(AddressPairRow.book_id == book_id)
+                .order_by(AddressPairRow.speaker_id, AddressPairRow.addressee_id)
+            ).all()
+            return tuple(address_pair_from_row(row) for row in rows)
+
 
 def _set_passage_ids(session: Session, structure: BookStructure) -> None:
     for paragraph in structure.paragraphs:
@@ -355,6 +396,8 @@ def _wipe_book(session: Session, slug: str) -> None:
         return
     _delete_sentences(session, book.id)
     session.execute(delete(LemmaOverrideRow))
+    session.execute(delete(AddressPairRow))
+    session.execute(delete(CharacterRow))
     session.execute(delete(TermRow))
     chapter_ids = session.scalars(
         select(ChapterRow.id).where(ChapterRow.book_id == book.id)

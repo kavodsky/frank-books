@@ -1,0 +1,22 @@
+# Closed gender/title cues for character-evidence ranking (roadmap 3.3).
+herr
+frau
+fräulein
+könig
+königin
+prinz
+prinzessin
+graf
+gräfin
+junge
+mädchen
+mann
+er
+sie
+ihn
+ihm
+ihr
+seine
+ihrer
+sein
+ihre

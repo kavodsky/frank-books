@@ -26,10 +26,19 @@ from frank.domain.model.book import (
 from frank.domain.model.lemma import LemmaOverride, LemmaSource
 from frank.domain.model.reunion import ReunionSource, VerbParticle
 from frank.domain.model.run import Run, RunStatus
-from frank.domain.model.termbase import Term, TermKind
+from frank.domain.model.termbase import (
+    AddressPair,
+    Character,
+    Gender,
+    Term,
+    TermKind,
+    TvForm,
+)
 from frank.infrastructure.persistence.tables import (
+    AddressPairRow,
     BookRow,
     ChapterRow,
+    CharacterRow,
     GlossPlanRow,
     LemmaOverrideRow,
     ParagraphRow,
@@ -319,4 +328,47 @@ def row_from_term(term: Term) -> TermRow:
         translation_uk=term.translation_uk,
         note=term.note,
         approved=term.approved,
+    )
+
+
+def character_from_row(row: CharacterRow) -> Character:
+    aliases = json.loads(row.aliases_json)
+    return Character(
+        id=row.id,
+        book_id=row.book_id,
+        canonical_name=row.canonical_name,
+        translation_uk=row.translation_uk,
+        gender=Gender(row.gender),
+        aliases=tuple(aliases),
+        role_note=row.role_note,
+    )
+
+
+def row_from_character(item: Character) -> CharacterRow:
+    return CharacterRow(
+        id=item.id,
+        book_id=item.book_id,
+        canonical_name=item.canonical_name,
+        translation_uk=item.translation_uk,
+        gender=item.gender.value,
+        aliases_json=json.dumps(list(item.aliases), ensure_ascii=False),
+        role_note=item.role_note,
+    )
+
+
+def address_pair_from_row(row: AddressPairRow) -> AddressPair:
+    return AddressPair(
+        book_id=row.book_id,
+        speaker_id=row.speaker_id,
+        addressee_id=row.addressee_id,
+        tv_form=TvForm(row.tv_form),
+    )
+
+
+def row_from_address_pair(item: AddressPair) -> AddressPairRow:
+    return AddressPairRow(
+        book_id=item.book_id,
+        speaker_id=item.speaker_id,
+        addressee_id=item.addressee_id,
+        tv_form=item.tv_form.value,
     )

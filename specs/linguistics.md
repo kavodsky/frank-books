@@ -48,20 +48,34 @@ gender before generation (roadmap 3.3). Two traps:
   character is female). The registry stores the character's gender; the gloss may
   note the source's grammatical gender when it is instructive.
 
+Map payload is PERSON evidence, not the chapter
+[`domain/services/character_evidence.py`, `prompts/character_map.j2`, ADR 0015].
+Cue lists `data/de_gender_cues.txt` / `data/hu_gender_cues.txt` only rank which
+sentences to send (`Frau Oliver sprach` before a bare `Oliver ging`; `Sándor úr`
+before a bare `Sanyi`). `ő` is not a cue. Reduce
+[`domain/services/character_merge.py`] unions drafts that share a lemma,
+canonical name, or alias (`Sanyi` with canonical `Sándor` joins `Sándor`).
+Conflicting female/male evidence stays `unknown`.
+
 ## 3. Address forms (T/V)
 
-[`address_pair` table, roadmap 3.4; enforced in `validation.py`]
+[`domain/services/address_detect.py`, `address_merge.py`, `prompts/address_resolve.j2`,
+roadmap 3.4, ADR 0016]
 
 - German `du → ти`, `Sie → Ви` (capitalized in Ukrainian when addressing one
-  person politely).
+  person politely). Heuristic T/V is token-based: `du`/`dich`/`dir` are T;
+  capitalized `Sie`/`Ihnen` in a speech-opener paragraph are V. Narrative
+  `Sie gingen` is ignored.
 - Hungarian is three-way: `te → ти`; `ön → Ви` (formal, distant);
   `maga → Ви` (formal but familiar/regional — gloss the nuance rather than trying
   to encode it in the pronoun); the `tetszik` + infinitive construction
   (`Tetszik tudni?`) is polite deference to an elder — render as `Ви` and gloss
   the construction on first occurrence.
 - A switch of address form mid-book is a plot event (intimacy or a quarrel). When
-  the address matrix detects a switch, the gloss must mark it, e.g.
-  «перейшов на «ти»».
+  the address matrix detects a switch, `tv_form` is MIXED and the gloss must mark
+  it, e.g. «перейшов на «ти»».
+- Speaker/addressee guesses stay same-sentence (speech verb + vocative). Missing
+  an endpoint drops the observation. SMART sees only those unresolved pairs.
 
 ## 4. Separable verbs and igekötő
 
@@ -253,3 +267,14 @@ and note it.
   only phrases already in `GlossLists.idioms` (empty until a committed list exists).
 - Does SMART term translation set `approved=true`? Conservative: no — 3.6 is the
   human gate; 3.2 only fills `translation_uk` and `note`.
+- Character registry map: full chapter text, or PERSON evidence only? Conservative:
+  PERSON lemmas plus `evidence_sentences_per_person` sentences, gender-cue first
+  (ADR 0015).
+- Character reduce: SMART merge, or deterministic? Conservative: deterministic on
+  shared lemma / canonical / alias.
+- Persist characters with unknown gender? Conservative: yes — 3.6 fills them;
+  3.3 must not guess.
+- Address matrix: SMART over the chapter, or heuristics + evidence sentences?
+  Conservative: speech-opener paragraphs, same-sentence attribution, SMART only
+  for known pairs with unknown form (ADR 0016). Unidentified speakers are dropped,
+  not stored as MIXED.

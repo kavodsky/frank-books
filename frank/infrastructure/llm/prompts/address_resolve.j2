@@ -1,0 +1,9 @@
+Decide T, V, or MIXED for each speaker→addressee pair. Use only the given
+sentences; do not invent people. German du/dich/dir is T; capitalized Sie/Ihnen
+addressing one person is V. Hungarian te is T; ön, maga, and tetszik+infinitive
+are V. If the evidence mixes T and V, or the form is unclear, return MIXED.
+Do not guess. Return JSON with an `items` array of
+`{speaker_id, addressee_id, tv_form}`.
+Source language: {{ lang }}
+
+{{ batch_json }}
