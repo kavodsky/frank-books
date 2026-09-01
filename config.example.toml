@@ -6,10 +6,14 @@ backend = "mlx"
 [fast]
 name = "fast-model"
 base_url = "http://127.0.0.1:11434/v1"
+# Optional Bearer token (OpenAI protocol). Prefer FRANK_FAST_API_KEY in the env.
+# api_key = ""
 
 [smart]
 name = "smart-model"
 base_url = "http://127.0.0.1:8080/v1"
+# Optional Bearer token (OpenAI protocol). Prefer FRANK_SMART_API_KEY in the env.
+# api_key = ""
 
 [budgets]
 prompt_tokens = 1800
@@ -38,3 +42,7 @@ foreign_script_ratio = 0.08
 german_model = "de_core_news_lg"
 hungarian_model = "hu_core_news_lg"
 lemma_batch_size = 50
+short_sentence_max_tokens = 8
+sense_unit_min_tokens = 3
+sense_unit_max_tokens = 8
+heavy_pp_min_tokens = 6

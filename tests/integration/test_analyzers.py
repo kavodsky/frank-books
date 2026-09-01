@@ -65,6 +65,10 @@ def test_load_analyzer_rejects_unknown_language() -> None:
         german_model="de_core_news_lg",
         hungarian_model="x",
         lemma_batch_size=50,
+        short_sentence_max_tokens=8,
+        sense_unit_min_tokens=3,
+        sense_unit_max_tokens=8,
+        heavy_pp_min_tokens=6,
     )
     with pytest.raises(UnknownError, match="unsupported source language"):
         load_analyzer("fr", settings)

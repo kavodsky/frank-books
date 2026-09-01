@@ -19,7 +19,15 @@ from frank.infrastructure.persistence.tables import create_book_db
 def test_phase0_ddl_creates_expected_tables(tmp_path) -> None:
     engine = create_book_db(tmp_path / "book.db")
     tables = set(inspect(engine).get_table_names())
-    assert {"book", "run", "passage", "paragraph", "sentence", "token"} <= tables
+    assert {
+        "book",
+        "run",
+        "passage",
+        "paragraph",
+        "sentence",
+        "token",
+        "sense_unit",
+    } <= tables
 
 
 @pytest.mark.integration

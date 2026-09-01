@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import os
 import tomllib
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_FAST_API_KEY_ENV = "FRANK_FAST_API_KEY"
+_SMART_API_KEY_ENV = "FRANK_SMART_API_KEY"
 
 Backend = Literal["ollama", "mlx"]
 SourceLang = Literal["de", "hu"]
@@ -17,6 +21,7 @@ TargetLang = Literal["uk"]
 class ModelEndpoint(BaseModel):
     name: str
     base_url: str
+    api_key: SecretStr | None = None
 
 
 class Budgets(BaseModel):
@@ -50,6 +55,10 @@ class NlpSettings(BaseModel):
     german_model: str
     hungarian_model: str
     lemma_batch_size: int = Field(ge=1, le=200)
+    short_sentence_max_tokens: int = Field(ge=1)
+    sense_unit_min_tokens: int = Field(ge=1)
+    sense_unit_max_tokens: int = Field(ge=1)
+    heavy_pp_min_tokens: int = Field(ge=1)
 
 
 class Settings(BaseSettings):
@@ -70,4 +79,29 @@ def load_settings(path: Path | None = None) -> Settings:
     resolved = Path("config.toml") if path is None else path
     with resolved.open("rb") as fh:
         payload = tomllib.load(fh)
-    return Settings.model_validate(payload)
+    return _with_env_api_keys(Settings.model_validate(payload))
+
+
+def _with_env_api_keys(settings: Settings) -> Settings:
+    return settings.model_copy(
+        update={
+            "fast": _endpoint_key_from_env(settings.fast, _FAST_API_KEY_ENV),
+            "smart": _endpoint_key_from_env(settings.smart, _SMART_API_KEY_ENV),
+        }
+    )
+
+
+def _endpoint_key_from_env(endpoint: ModelEndpoint, env_name: str) -> ModelEndpoint:
+    if _secret_text(endpoint.api_key) is not None:
+        return endpoint
+    raw = os.environ.get(env_name, "").strip()
+    if not raw:
+        return endpoint
+    return endpoint.model_copy(update={"api_key": SecretStr(raw)})
+
+
+def _secret_text(key: SecretStr | None) -> str | None:
+    if key is None:
+        return None
+    value = key.get_secret_value().strip()
+    return value or None

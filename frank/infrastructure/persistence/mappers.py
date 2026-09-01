@@ -6,7 +6,7 @@ import json
 from datetime import UTC, datetime
 
 from frank.domain.errors import ErrorClass
-from frank.domain.model.annotation import MorphFeature, Morphology, Token
+from frank.domain.model.annotation import MorphFeature, Morphology, SenseUnit, Token
 from frank.domain.model.book import (
     Book,
     BookStatus,
@@ -24,6 +24,7 @@ from frank.infrastructure.persistence.tables import (
     LemmaOverrideRow,
     ParagraphRow,
     RunRow,
+    SenseUnitRow,
     SentenceRow,
     TokenRow,
     VerbParticleRow,
@@ -180,6 +181,26 @@ def row_from_token(token: Token) -> TokenRow:
         dep=token.dep,
         head_index=token.head_index,
         reunited_lemma=token.reunited_lemma,
+    )
+
+
+def sense_unit_from_row(row: SenseUnitRow) -> SenseUnit:
+    return SenseUnit(
+        id=row.id,
+        sentence_id=row.sentence_id,
+        index=row.index,
+        start_index=row.start_index,
+        end_index=row.end_index,
+    )
+
+
+def row_from_sense_unit(unit: SenseUnit) -> SenseUnitRow:
+    return SenseUnitRow(
+        id=unit.id,
+        sentence_id=unit.sentence_id,
+        index=unit.index,
+        start_index=unit.start_index,
+        end_index=unit.end_index,
     )
 
 

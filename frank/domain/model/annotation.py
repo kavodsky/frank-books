@@ -1,4 +1,4 @@
-"""Token, Morphology — analyzer output, persistence-ignorant (roadmap 2.2)."""
+"""Token, Morphology, SenseUnit — analyzer output, persistence-ignorant."""
 
 from __future__ import annotations
 
@@ -62,9 +62,29 @@ class Token(BaseModel):
     reunited_lemma: str | None = None
 
 
+class SenseUnit(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    sentence_id: str
+    index: int
+    start_index: int
+    end_index: int
+
+
+class SegmentationConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    short_sentence_max_tokens: int
+    unit_min_tokens: int
+    unit_max_tokens: int
+    heavy_pp_min_tokens: int
+
+
 class Annotation(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     sentences: tuple[Sentence, ...]
     tokens: tuple[Token, ...]
     particles: tuple[VerbParticle, ...] = ()
+    sense_units: tuple[SenseUnit, ...] = ()

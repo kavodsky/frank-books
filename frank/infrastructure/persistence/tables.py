@@ -104,6 +104,16 @@ class VerbParticleRow(Base):
     source: Mapped[str]
 
 
+class SenseUnitRow(Base):
+    __tablename__ = "sense_unit"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    sentence_id: Mapped[str] = mapped_column(ForeignKey("sentence.id"))
+    index: Mapped[int]
+    start_index: Mapped[int]
+    end_index: Mapped[int]
+
+
 class TermRow(Base):
     __tablename__ = "term"
 

@@ -93,7 +93,7 @@ frank-books/
         termbase.py    #   Term, Character, AddressForm, StyleCard
         context.py     #   PromptContext and its budget sections
       services/        # pure domain logic — the real value of this layer
-        segmentation.py    # sense-unit rules over a parse (no spaCy import: takes a ParsedSentence VO)
+        segmentation.py    # sense-unit rules over Token dep/head (no spaCy)
         gloss_planning.py  # the stateful first-occurrence / quota algorithm
         passage_grouping.py
         reunification.py   # separable verb / igekötő pairing rules
@@ -155,6 +155,7 @@ Tests mirror the layers, so a failing path tells you which layer broke:
       test_context_assembly.py
       test_validation.py
       test_reunification.py
+      test_segmentation.py
       test_passage_grouping.py
     integration/     # infrastructure against real SQLite / a mocked LLM server
       test_repositories.py
@@ -193,7 +194,8 @@ Notes:
    constructor injection; Dagster resources wire them in `interfaces/`.
 4. **LLM I/O contracts are Pydantic models in `infrastructure/llm/schemas.py`**, and
    the JSON schema sent as `response_format` is generated from them via
-   `model_json_schema()`. There is no hand-written `schemas/*.json` directory.
+   `model_json_schema()`, then made OpenAI-strict (ADR 0014). There is no
+   hand-written `schemas/*.json` directory.
 5. **The anti-corruption layer is mandatory:** if a model returns garbage, malformed
    fields, or hallucinated lemmas, that is handled in `llm/generator.py`. Domain
    objects are always valid by construction.

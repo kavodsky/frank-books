@@ -12,7 +12,12 @@ from frank.application.annotate_chapter import (
     annotate_book,
 )
 from frank.application.ingest_book import IngestPorts, IngestRequest, ingest_book
-from frank.domain.model.annotation import Morphology, ParsedSentence, ParsedToken
+from frank.domain.model.annotation import (
+    Morphology,
+    ParsedSentence,
+    ParsedToken,
+    SegmentationConfig,
+)
 from frank.infrastructure.nlp.prefixes import load_inventory
 from frank.infrastructure.persistence.repositories import SqliteBookRepository
 from frank.infrastructure.persistence.tables import create_book_db
@@ -20,6 +25,12 @@ from frank.infrastructure.sources.fetch import LocalFileFetcher
 from frank.infrastructure.sources.raw_store import FilesystemRawStore
 
 CHAPTERS = Path(__file__).resolve().parents[1] / "fixtures" / "chapters"
+_SEG = SegmentationConfig(
+    short_sentence_max_tokens=8,
+    unit_min_tokens=3,
+    unit_max_tokens=8,
+    heavy_pp_min_tokens=6,
+)
 
 
 class PeriodAnalyzer:
@@ -113,6 +124,20 @@ def _request(path: Path, slug: str, lang: str) -> IngestRequest:
     )
 
 
+def _unit_surfaces(repo: SqliteBookRepository, slug: str) -> tuple[str, ...]:
+    tokens = repo.get_tokens(slug)
+    found: list[str] = []
+    for unit in repo.get_sense_units(slug):
+        piece = [
+            token.surface
+            for token in tokens
+            if token.sentence_id == unit.sentence_id
+            and unit.start_index <= token.index <= unit.end_index
+        ]
+        found.append(" ".join(piece))
+    return tuple(found)
+
+
 @pytest.mark.integration
 def test_annotate_persists_german_and_hungarian_sentences(tmp_path) -> None:
     ingest_book(
@@ -123,8 +148,8 @@ def test_annotate_persists_german_and_hungarian_sentences(tmp_path) -> None:
         _ingest_ports(tmp_path, "hu"),
         _request(CHAPTERS / "hu_sample.txt", "hu-ch", "hu"),
     )
-    de = annotate_book(_annotate_ports(tmp_path), "de-ch")
-    hu = annotate_book(_annotate_ports(tmp_path), "hu-ch")
+    de = annotate_book(_annotate_ports(tmp_path), "de-ch", _SEG)
+    hu = annotate_book(_annotate_ports(tmp_path), "hu-ch", _SEG)
     repo_de = SqliteBookRepository(create_book_db(tmp_path / "de-ch" / "book.db"))
     repo_hu = SqliteBookRepository(create_book_db(tmp_path / "hu-ch" / "book.db"))
     assert de.sentence_count == 3
@@ -134,6 +159,19 @@ def test_annotate_persists_german_and_hungarian_sentences(tmp_path) -> None:
     assert repo_hu.get_sentences("hu-ch")[0].text.startswith("Egyszer volt")
     assert all(token.lemma for token in repo_de.get_tokens("de-ch"))
     assert all(token.lemma for token in repo_hu.get_tokens("hu-ch"))
+    assert de.sense_unit_count == de.sentence_count
+    assert hu.sense_unit_count == hu.sentence_count
+    assert len(repo_de.get_sense_units("de-ch")) == de.sense_unit_count
+    assert _unit_surfaces(repo_de, "de-ch") == (
+        "Es war einmal ein armer Mann .",
+        "Er lebte am Waldrand .",
+        "Am Morgen stand er auf .",
+    )
+    assert _unit_surfaces(repo_hu, "hu-ch") == (
+        "Egyszer volt, hol nem volt .",
+        "A királyfi elindult .",
+        "Megérkezett a várba .",
+    )
 
 
 @pytest.mark.integration
@@ -143,24 +181,27 @@ def test_annotate_is_idempotent(tmp_path) -> None:
         _request(CHAPTERS / "de_sample.txt", "same", "de"),
     )
     ports = _annotate_ports(tmp_path)
-    first = annotate_book(ports, "same")
-    second = annotate_book(ports, "same")
+    first = annotate_book(ports, "same", _SEG)
+    second = annotate_book(ports, "same", _SEG)
     repo = SqliteBookRepository(create_book_db(tmp_path / "same" / "book.db"))
     assert first.sentence_count == second.sentence_count
     assert first.token_count == second.token_count
+    assert first.sense_unit_count == second.sense_unit_count
     assert len(repo.get_sentences("same")) == first.sentence_count
     assert len(repo.get_tokens("same")) == first.token_count
+    assert len(repo.get_sense_units("same")) == first.sense_unit_count
 
 
 @pytest.mark.integration
 def test_reingest_drops_sentence_rows(tmp_path) -> None:
     request = _request(CHAPTERS / "de_sample.txt", "wipe", "de")
     ingest_book(_ingest_ports(tmp_path, "de"), request)
-    annotate_book(_annotate_ports(tmp_path), "wipe")
+    annotate_book(_annotate_ports(tmp_path), "wipe", _SEG)
     ingest_book(_ingest_ports(tmp_path, "de"), request)
     repo = SqliteBookRepository(create_book_db(tmp_path / "wipe" / "book.db"))
     assert repo.get_sentences("wipe") == ()
     assert repo.get_tokens("wipe") == ()
+    assert repo.get_sense_units("wipe") == ()
 
 
 @pytest.mark.integration
@@ -169,7 +210,7 @@ def test_oliver_twist_annotate_tokens_all_have_lemmas(tmp_path) -> None:
         _ingest_ports(tmp_path, "de"),
         _request(CHAPTERS / "oliver_twist_de.txt", "oliver-de", "de"),
     )
-    report = annotate_book(_annotate_ports(tmp_path), "oliver-de")
+    report = annotate_book(_annotate_ports(tmp_path), "oliver-de", _SEG)
     repo = SqliteBookRepository(create_book_db(tmp_path / "oliver-de" / "book.db"))
     tokens = repo.get_tokens("oliver-de")
     assert report.token_count == len(tokens)
@@ -241,7 +282,7 @@ def test_annotate_persists_reunited_separable_verb(tmp_path) -> None:
         ),
         arbiter_for=lambda _lang: IdleArbiter(),
     )
-    report = annotate_book(ports, "anrufen")
+    report = annotate_book(ports, "anrufen", _SEG)
     repo = SqliteBookRepository(create_book_db(tmp_path / "anrufen" / "book.db"))
     tokens = repo.get_tokens("anrufen")
     particles = repo.get_particles("anrufen")

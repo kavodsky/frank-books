@@ -91,14 +91,37 @@ gender before generation (roadmap 3.3). Two traps:
   when it disambiguates something the reader would otherwise misread
   (`dem Mann – чоловікові`).
 
-## 6. Definiteness (Hungarian)
+## 6. Sense units
+
+[`domain/services/segmentation.py`, roadmap 2.3]
+
+A sense unit is a contiguous token span, the Frank interpolation unit. Splitting is
+deterministic on the dependency parse (German TIGER-style labels from
+`de_core_news_lg`, Hungarian UD from HuSpaCy). No LLM.
+
+- Sentences with ≤ `short_sentence_max_tokens` **non-punctuation** tokens stay one
+  unit. ``Es war einmal ein armer Mann.`` (6 content tokens) is never cut.
+- Longer sentences split where the owning finite verb changes: subordinates
+  (`mo`/`oc`/`rc`, UD `advcl`/`ccomp`/`acl`), coordinations (`cj`/`conj`), and
+  relative clauses.   ``Als er aufstand, sah er, dass der Wald still war.`` → three
+  units. ``Amikor megérkezett a várba, az őrök kinyitották a kaput.`` → two.
+- A German coordinating conjunction (`cd`/`und`) moves onto the following unit.
+  Leading commas attach to the preceding unit.
+- Leftover spans with no finite verb merge into a neighbour when they are shorter
+  than `sense_unit_min_tokens` (``Eine Stadt,`` joins its relative clause).
+- Units still longer than `sense_unit_max_tokens` may split off a contiguous heavy
+  PP (`mo`/`obl`/`nmod`, at least `heavy_pp_min_tokens` content tokens).
+- Infinitival complements stay with their finite governor
+  (``die ich nicht bezeichnen will`` is one relative unit).
+
+## 7. Definiteness (Hungarian)
 
 The definite/indefinite conjugation (`olvasok` vs `olvasom`) has no Ukrainian
 equivalent and is invisible in translation. Gloss it on first occurrence and then
 NEVER again — it is grammar trivia that would clutter every page. [gloss reason
 `morph_trap`, quota-limited]
 
-## 7. Word order and the literal layer
+## 8. Word order and the literal layer
 
 The `word_for_word_uk` layer exists to expose the source's structure, so it must
 follow source order even when the result is awkward Ukrainian — that awkwardness
@@ -112,7 +135,7 @@ is pedagogically the point (see the reference: *просто живу в соб�
   German trigger; Hungarian topic-focus order and heavy pre-modifiers are the main
   Hungarian trigger.
 
-## 8. Register and archaism
+## 9. Register and archaism
 
 - Source archaism is reflected in the ORIGINAL (untouched) and lightly in
   `natural_uk`; glosses and grammar notes are always in plain modern Ukrainian.
@@ -120,7 +143,7 @@ is pedagogically the point (see the reference: *просто живу в соб�
 - Dialect and sociolect: translate the meaning, and note the register in the gloss
   («просторічно», «діалектне»), rather than substituting a Ukrainian dialect.
 
-## 9. Idioms
+## 10. Idioms
 
 - An idiom gets `natural_uk` = the Ukrainian equivalent idiom (if one exists) and
   `word_for_word_uk` = the literal image, because the literal image is what makes
@@ -128,7 +151,7 @@ is pedagogically the point (see the reference: *просто живу в соб�
   виправить»; literal: «з собаки не буде сала».
 - Idioms are always glossed regardless of quota (roadmap 2.4).
 
-## 10. Russian interference (critical)
+## 11. Russian interference (critical)
 
 Local models drift into Russian on Ukrainian output, especially in long runs, and
 partially — a Russian word inside a Ukrainian sentence. Beyond the character-set
@@ -156,3 +179,6 @@ and note it.
 - German separable-particle dependency label: roadmap 2.2c says `svp`, tech-stack
   says `prt`. `de_core_news_lg` 3.8 emits `svp` (UPOS `ADP`). Conservative: accept
   `svp`, `prt`, and `compound:prt`.
+- Sense-unit length counts non-punctuation tokens. Should a comma-only split
+  fire when a unit is still over `sense_unit_max_tokens` after clause and heavy-PP
+  cuts? Conservative: leave the oversized unit intact.

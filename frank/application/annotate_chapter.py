@@ -1,4 +1,4 @@
-"""Sentence split, tokens, lemma refinement, and reunification (roadmap 2.1–2.2c)."""
+"""Sentence split through sense-unit spans (roadmap 2.1–2.3)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, ConfigDict
 
-from frank.domain.model.annotation import Annotation, Token
+from frank.domain.model.annotation import Annotation, SegmentationConfig, Token
 from frank.domain.model.book import BookStructure, Paragraph, Sentence
 from frank.domain.model.lemma import LemmaOverride, LemmaPair, LemmaType
 from frank.domain.model.reunion import PrefixInventory
@@ -24,6 +24,7 @@ from frank.domain.services.reunification import (
     partition_reunions,
     reunion_candidates,
 )
+from frank.domain.services.segmentation import segment_annotation
 
 
 @dataclass(frozen=True)
@@ -49,9 +50,12 @@ class AnnotateReport(BaseModel):
     token_count: int
     override_count: int
     particle_count: int
+    sense_unit_count: int
 
 
-def annotate_book(ports: AnnotatePorts, slug: str) -> AnnotateReport:
+def annotate_book(
+    ports: AnnotatePorts, slug: str, segmentation: SegmentationConfig
+) -> AnnotateReport:
     repo = ports.open_books(slug)
     structure = repo.get_structure(slug)
     lang = structure.book.lang
@@ -61,15 +65,18 @@ def annotate_book(ports: AnnotatePorts, slug: str) -> AnnotateReport:
     annotation = _annotate_structure(structure, analyzer)
     refined, overrides = _refine(annotation, analyzer, support.lexicon, arbiter)
     reunited = _reunite(refined, support.inventory, support.lexicon, arbiter)
-    repo.replace_annotation(slug, reunited)
+    units = segment_annotation(reunited, segmentation)
+    done = reunited.model_copy(update={"sense_units": units})
+    repo.replace_annotation(slug, done)
     repo.replace_overrides(slug, overrides)
     return AnnotateReport(
         slug=slug,
         paragraph_count=len(structure.paragraphs),
-        sentence_count=len(reunited.sentences),
-        token_count=len(reunited.tokens),
+        sentence_count=len(done.sentences),
+        token_count=len(done.tokens),
         override_count=len(overrides),
-        particle_count=len(reunited.particles),
+        particle_count=len(done.particles),
+        sense_unit_count=len(done.sense_units),
     )
 
 
@@ -81,6 +88,7 @@ def render_annotate_report(report: AnnotateReport) -> str:
         f"tokens: {report.token_count}\n"
         f"lemma_overrides: {report.override_count}\n"
         f"verb_particles: {report.particle_count}\n"
+        f"sense_units: {report.sense_unit_count}\n"
     )
 
 

@@ -17,8 +17,9 @@ from tenacity import (
     wait_exponential,
 )
 
-from frank.config import Settings
+from frank.config import ModelEndpoint, Settings
 from frank.domain.errors import ModelTimeout, ModelUnreachable, SchemaInvalid
+from frank.infrastructure.llm.schemas import openai_strict_schema
 
 _CHAT_PATH = "/chat/completions"
 
@@ -69,10 +70,14 @@ class OpenAiChatClient:
         retry: RetryPolicy,
         log_dir: Path,
         http: httpx.AsyncClient | None = None,
+        api_keys: dict[str, str] | None = None,
     ) -> None:
         self._retry = retry
         self._log_dir = log_dir
         self._http = http or httpx.AsyncClient(trust_env=False)
+        self._api_keys = {
+            base.rstrip("/"): token for base, token in (api_keys or {}).items()
+        }
 
     async def aclose(self) -> None:
         await self._http.aclose()
@@ -117,7 +122,10 @@ class OpenAiChatClient:
     async def _send(self, request: CompletionRequest) -> dict[str, Any]:
         url = request.base_url.rstrip("/") + _CHAT_PATH
         body = _request_body(request)
-        response = await self._post_with_retry(url, body, request.timeout_seconds)
+        headers = _bearer_header(self._api_keys, request.base_url)
+        response = await self._post_with_retry(
+            url, body, request.timeout_seconds, headers
+        )
         return _parse_json_body(response)
 
     async def _post_with_retry(
@@ -125,6 +133,7 @@ class OpenAiChatClient:
         url: str,
         body: dict[str, Any],
         timeout: float,
+        headers: dict[str, str],
     ) -> httpx.Response:
         retrying = AsyncRetrying(
             stop=stop_after_attempt(self._retry.max_retries + 1),
@@ -139,7 +148,7 @@ class OpenAiChatClient:
         response: httpx.Response | None = None
         async for attempt in retrying:
             with attempt:
-                response = await self._post_once(url, body, timeout)
+                response = await self._post_once(url, body, timeout, headers)
         if response is None:
             raise ModelUnreachable("retry loop produced no response")
         return response
@@ -149,8 +158,11 @@ class OpenAiChatClient:
         url: str,
         body: dict[str, Any],
         timeout: float,
+        headers: dict[str, str],
     ) -> httpx.Response:
-        response = await self._http.post(url, json=body, timeout=timeout)
+        response = await self._http.post(
+            url, json=body, timeout=timeout, headers=headers
+        )
         response.raise_for_status()
         return response
 
@@ -183,7 +195,34 @@ def chat_client_from_settings(settings: Settings, log_dir: Path) -> OpenAiChatCl
         min_seconds=settings.budgets.llm_retry_min_seconds,
         max_seconds=settings.budgets.llm_retry_max_seconds,
     )
-    return OpenAiChatClient(retry=policy, log_dir=log_dir)
+    return OpenAiChatClient(
+        retry=policy,
+        log_dir=log_dir,
+        api_keys=_api_keys_for(settings.fast, settings.smart),
+    )
+
+
+def _api_keys_for(fast: ModelEndpoint, smart: ModelEndpoint) -> dict[str, str]:
+    found: dict[str, str] = {}
+    for endpoint in (fast, smart):
+        token = _endpoint_token(endpoint)
+        if token is not None:
+            found[endpoint.base_url.rstrip("/")] = token
+    return found
+
+
+def _endpoint_token(endpoint: ModelEndpoint) -> str | None:
+    if endpoint.api_key is None:
+        return None
+    token = endpoint.api_key.get_secret_value().strip()
+    return token or None
+
+
+def _bearer_header(api_keys: dict[str, str], base_url: str) -> dict[str, str]:
+    token = api_keys.get(base_url.rstrip("/"))
+    if token is None:
+        return {}
+    return {"Authorization": f"Bearer {token}"}
 
 
 def _request_body(request: CompletionRequest) -> dict[str, Any]:
@@ -198,7 +237,7 @@ def _request_body(request: CompletionRequest) -> dict[str, Any]:
             "json_schema": {
                 "name": "result",
                 "strict": True,
-                "schema": request.json_schema,
+                "schema": openai_strict_schema(request.json_schema),
             },
         }
     return body

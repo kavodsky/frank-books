@@ -22,6 +22,7 @@ from frank.application.ingest_book import (
     render_inspect_report,
 )
 from frank.config import Settings, load_settings
+from frank.domain.model.annotation import SegmentationConfig
 from frank.infrastructure.llm.benchmark import (
     BenchPlan,
     load_gold_files,
@@ -142,9 +143,11 @@ def annotate(
     slug: Annotated[str, typer.Argument(help="Book slug under books/")],
     config: Annotated[Path, typer.Option("--config")] = Path("config.toml"),
 ) -> None:
-    """Split ingested paragraphs into sentences, tokens, lemmas, and particles."""
+    """Split ingested paragraphs into sentences, tokens, lemmas, and sense units."""
     settings = load_settings(config)
-    report = annotate_book(_annotate_ports(settings, slug), slug)
+    report = annotate_book(
+        _annotate_ports(settings, slug), slug, _segmentation(settings)
+    )
     typer.echo(render_annotate_report(report))
 
 
@@ -166,6 +169,16 @@ def _annotate_ports(settings: Settings, slug: str) -> AnnotatePorts:
             inventory=load_inventory(lang),
         ),
         arbiter_for=lambda lang: _lemma_arbiter(settings, slug, lang),
+    )
+
+
+def _segmentation(settings: Settings) -> SegmentationConfig:
+    nlp = settings.nlp
+    return SegmentationConfig(
+        short_sentence_max_tokens=nlp.short_sentence_max_tokens,
+        unit_min_tokens=nlp.sense_unit_min_tokens,
+        unit_max_tokens=nlp.sense_unit_max_tokens,
+        heavy_pp_min_tokens=nlp.heavy_pp_min_tokens,
     )
 
 
