@@ -71,6 +71,12 @@ class GlossSettings(BaseModel):
     rare_morph_max_count: int = Field(ge=1)
 
 
+class PassageSettings(BaseModel):
+    min_chars: int = Field(ge=1)
+    max_chars: int = Field(ge=1)
+    dialogue_max_chars: int = Field(ge=1)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="forbid")
 
@@ -83,6 +89,7 @@ class Settings(BaseSettings):
     ingest: IngestSettings
     nlp: NlpSettings
     gloss: GlossSettings
+    passage: PassageSettings
 
 
 def load_settings(path: Path | None = None) -> Settings:

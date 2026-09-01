@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from frank.application.annotate_chapter import (
+    AnnotateConfig,
     AnnotatePorts,
     LemmaSupport,
     annotate_book,
@@ -21,6 +22,7 @@ from frank.domain.model.annotation import (
     ParsedToken,
     SegmentationConfig,
 )
+from frank.domain.model.book import PassageGroupingConfig
 from frank.infrastructure.nlp.prefixes import load_inventory
 from frank.infrastructure.persistence.repositories import SqliteBookRepository
 from frank.infrastructure.persistence.tables import create_book_db
@@ -42,6 +44,13 @@ _GLOSS = GlossPlanConfig(
     quota_chapter_start=6,
     quota_last_third=2,
     rare_morph_max_count=2,
+)
+_CONFIG = AnnotateConfig(
+    segmentation=_SEG,
+    gloss=_GLOSS,
+    grouping=PassageGroupingConfig(
+        min_chars=800, max_chars=1500, dialogue_max_chars=160
+    ),
 )
 
 
@@ -161,8 +170,8 @@ def test_annotate_persists_german_and_hungarian_sentences(tmp_path) -> None:
         _ingest_ports(tmp_path, "hu"),
         _request(CHAPTERS / "hu_sample.txt", "hu-ch", "hu"),
     )
-    de = annotate_book(_annotate_ports(tmp_path), "de-ch", _SEG, _GLOSS)
-    hu = annotate_book(_annotate_ports(tmp_path), "hu-ch", _SEG, _GLOSS)
+    de = annotate_book(_annotate_ports(tmp_path), "de-ch", _CONFIG)
+    hu = annotate_book(_annotate_ports(tmp_path), "hu-ch", _CONFIG)
     repo_de = SqliteBookRepository(create_book_db(tmp_path / "de-ch" / "book.db"))
     repo_hu = SqliteBookRepository(create_book_db(tmp_path / "hu-ch" / "book.db"))
     assert de.sentence_count == 3
@@ -190,6 +199,11 @@ def test_annotate_persists_german_and_hungarian_sentences(tmp_path) -> None:
     assert hu.gloss_count > 0
     assert len(plan_de) == de.gloss_count
     assert all(item.gloss for item in plan_de)
+    assert de.passage_count >= 1
+    assert hu.passage_count >= 1
+    assert repo_de.get_passages("de-ch")
+    assert repo_hu.get_passages("hu-ch")
+    assert all(item.passage_id for item in repo_de.get_structure("de-ch").paragraphs)
 
 
 @pytest.mark.integration
@@ -199,31 +213,35 @@ def test_annotate_is_idempotent(tmp_path) -> None:
         _request(CHAPTERS / "de_sample.txt", "same", "de"),
     )
     ports = _annotate_ports(tmp_path)
-    first = annotate_book(ports, "same", _SEG, _GLOSS)
+    first = annotate_book(ports, "same", _CONFIG)
     repo = SqliteBookRepository(create_book_db(tmp_path / "same" / "book.db"))
     first_plan = repo.get_gloss_plan("same")
-    second = annotate_book(ports, "same", _SEG, _GLOSS)
+    first_passages = repo.get_passages("same")
+    second = annotate_book(ports, "same", _CONFIG)
     assert first.sentence_count == second.sentence_count
     assert first.token_count == second.token_count
     assert first.sense_unit_count == second.sense_unit_count
     assert first.gloss_count == second.gloss_count
+    assert first.passage_count == second.passage_count
     assert len(repo.get_sentences("same")) == first.sentence_count
     assert len(repo.get_tokens("same")) == first.token_count
     assert len(repo.get_sense_units("same")) == first.sense_unit_count
     assert repo.get_gloss_plan("same") == first_plan
+    assert repo.get_passages("same") == first_passages
 
 
 @pytest.mark.integration
 def test_reingest_drops_sentence_rows(tmp_path) -> None:
     request = _request(CHAPTERS / "de_sample.txt", "wipe", "de")
     ingest_book(_ingest_ports(tmp_path, "de"), request)
-    annotate_book(_annotate_ports(tmp_path), "wipe", _SEG, _GLOSS)
+    annotate_book(_annotate_ports(tmp_path), "wipe", _CONFIG)
     ingest_book(_ingest_ports(tmp_path, "de"), request)
     repo = SqliteBookRepository(create_book_db(tmp_path / "wipe" / "book.db"))
     assert repo.get_sentences("wipe") == ()
     assert repo.get_tokens("wipe") == ()
     assert repo.get_sense_units("wipe") == ()
     assert repo.get_gloss_plan("wipe") == ()
+    assert repo.get_passages("wipe") == ()
 
 
 @pytest.mark.integration
@@ -232,12 +250,18 @@ def test_oliver_twist_annotate_tokens_all_have_lemmas(tmp_path) -> None:
         _ingest_ports(tmp_path, "de"),
         _request(CHAPTERS / "oliver_twist_de.txt", "oliver-de", "de"),
     )
-    report = annotate_book(_annotate_ports(tmp_path), "oliver-de", _SEG, _GLOSS)
+    report = annotate_book(_annotate_ports(tmp_path), "oliver-de", _CONFIG)
     repo = SqliteBookRepository(create_book_db(tmp_path / "oliver-de" / "book.db"))
     tokens = repo.get_tokens("oliver-de")
+    structure = repo.get_structure("oliver-de")
     assert report.token_count == len(tokens)
     assert tokens
     assert all(token.lemma for token in tokens)
+    assert report.passage_count == len(structure.passages) >= 1
+    passage_chapter = {item.id: item.chapter_id for item in structure.passages}
+    for paragraph in structure.paragraphs:
+        assert paragraph.passage_id is not None
+        assert passage_chapter[paragraph.passage_id] == paragraph.chapter_id
 
 
 class _SeparableAnalyzer:
@@ -305,7 +329,7 @@ def test_annotate_persists_reunited_separable_verb(tmp_path) -> None:
         arbiter_for=lambda _lang: IdleArbiter(),
         gloss_lists_for=lambda _lang: GlossLists(),
     )
-    report = annotate_book(ports, "anrufen", _SEG, _GLOSS)
+    report = annotate_book(ports, "anrufen", _CONFIG)
     repo = SqliteBookRepository(create_book_db(tmp_path / "anrufen" / "book.db"))
     tokens = repo.get_tokens("anrufen")
     particles = repo.get_particles("anrufen")

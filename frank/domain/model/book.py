@@ -1,4 +1,4 @@
-"""Book, Chapter, Paragraph, Sentence — Passage grouping comes in 2.5."""
+"""Book, Chapter, Passage, Paragraph, Sentence."""
 
 from __future__ import annotations
 
@@ -39,6 +39,22 @@ class Chapter(BaseModel):
     summary_uk: str | None = None
 
 
+class Passage(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    chapter_id: str
+    index: int
+
+
+class PassageGroupingConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    min_chars: int
+    max_chars: int
+    dialogue_max_chars: int
+
+
 class Paragraph(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -66,3 +82,4 @@ class BookStructure(BaseModel):
     book: Book
     chapters: tuple[Chapter, ...]
     paragraphs: tuple[Paragraph, ...]
+    passages: tuple[Passage, ...] = ()

@@ -20,6 +20,7 @@ from frank.domain.model.book import (
     Chapter,
     Paragraph,
     ParagraphStatus,
+    Passage,
     Sentence,
 )
 from frank.domain.model.lemma import LemmaOverride, LemmaSource
@@ -31,6 +32,7 @@ from frank.infrastructure.persistence.tables import (
     GlossPlanRow,
     LemmaOverrideRow,
     ParagraphRow,
+    PassageRow,
     RunRow,
     SenseUnitRow,
     SentenceRow,
@@ -117,6 +119,18 @@ def row_from_chapter(chapter: Chapter) -> ChapterRow:
         index=chapter.index,
         title=chapter.title,
         summary_uk=chapter.summary_uk,
+    )
+
+
+def passage_from_row(row: PassageRow) -> Passage:
+    return Passage(id=row.id, chapter_id=row.chapter_id, index=row.index)
+
+
+def row_from_passage(passage: Passage) -> PassageRow:
+    return PassageRow(
+        id=passage.id,
+        chapter_id=passage.chapter_id,
+        index=passage.index,
     )
 
 

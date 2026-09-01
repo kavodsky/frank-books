@@ -187,6 +187,21 @@ check (roadmap 5.2), watch for calques that pass that check:
 Maintain `data/uk_calques.toml` and treat hits as a blocking validation failure.
 [`domain/services/validation.py`]
 
+## 13. Passage grouping
+
+[`domain/services/passage_grouping.py`, roadmap 2.5]
+
+The Frank doubling unit is a **passage**: consecutive paragraphs packed to
+`min_chars`–`max_chars` of original text. A paragraph is never split; a passage
+never crosses a chapter. Generation and caching stay per paragraph.
+
+A run of short dialogue paragraphs stays one passage even when the sum exceeds
+`max_chars`, so adapted/unadapted doubling does not cut a conversation in half.
+German: `— Guten Tag.` / `— Guten Abend.`. Hungarian: `— Hol vagy?` / `— Itt.`
+Conservative opener heuristic: after strip, the paragraph is at most
+`dialogue_max_chars` and starts with `— – - « » „ “ " '`. Short non-speech
+(`Ja.` / `Igen.`) packs by the ordinary char budget.
+
 ---
 
 ## Open questions
@@ -214,3 +229,7 @@ and note it.
   rule does not fire. Reunited-verb and rare-morph traps follow the roadmap ALWAYS.
 - If quota drops a `first_occurrence`, is the next token of that lemma still a
   first occurrence? Conservative: yes, until one gloss of that lemma is kept.
+- Dialogue-opener heuristic for passage grouping: is a leading hyphen or quote
+  enough, or must the paragraph also look like turn-taking (no narrator verb)?
+  Conservative: opener + `dialogue_max_chars` only; short `Ja.` / `Igen.` without
+  an opener is not a dialogue run.

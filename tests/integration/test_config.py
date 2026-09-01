@@ -32,6 +32,9 @@ def test_example_config_loads(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.gloss.reminder_gap_sentences == 400
     assert settings.gloss.quota_chapter_start == 6
     assert settings.gloss.quota_last_third == 2
+    assert settings.passage.min_chars == 800
+    assert settings.passage.max_chars == 1500
+    assert settings.passage.dialogue_max_chars == 160
     assert settings.fast.api_key is None
     assert settings.smart.api_key is None
 

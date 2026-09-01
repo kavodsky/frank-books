@@ -55,3 +55,8 @@ reminder_max_occurrences = 4
 quota_chapter_start = 6
 quota_last_third = 2
 rare_morph_max_count = 2
+
+[passage]
+min_chars = 800
+max_chars = 1500
+dialogue_max_chars = 160

@@ -1,4 +1,4 @@
-"""Sentence split through gloss planning (roadmap 2.1–2.4)."""
+"""Sentence split through passage grouping (roadmap 2.1–2.5)."""
 
 from __future__ import annotations
 
@@ -16,7 +16,12 @@ from frank.domain.model.annotation import (
     SentencePlacement,
     Token,
 )
-from frank.domain.model.book import BookStructure, Paragraph, Sentence
+from frank.domain.model.book import (
+    BookStructure,
+    Paragraph,
+    PassageGroupingConfig,
+    Sentence,
+)
 from frank.domain.model.lemma import LemmaOverride, LemmaPair, LemmaType
 from frank.domain.model.reunion import PrefixInventory
 from frank.domain.ports.linguistics import (
@@ -28,6 +33,7 @@ from frank.domain.ports.repositories import BookRepository
 from frank.domain.services.annotation import annotate_paragraph
 from frank.domain.services.gloss_planning import plan_glosses
 from frank.domain.services.lemmas import apply_overrides, lemma_types, partition_lemmas
+from frank.domain.services.passage_grouping import group_passages
 from frank.domain.services.reunification import (
     apply_reunions,
     partition_reunions,
@@ -51,6 +57,14 @@ class AnnotatePorts:
     gloss_lists_for: Callable[[str], GlossLists]
 
 
+class AnnotateConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    segmentation: SegmentationConfig
+    gloss: GlossPlanConfig
+    grouping: PassageGroupingConfig
+
+
 class AnnotateReport(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -62,13 +76,11 @@ class AnnotateReport(BaseModel):
     particle_count: int
     sense_unit_count: int
     gloss_count: int
+    passage_count: int
 
 
 def annotate_book(
-    ports: AnnotatePorts,
-    slug: str,
-    segmentation: SegmentationConfig,
-    gloss: GlossPlanConfig,
+    ports: AnnotatePorts, slug: str, config: AnnotateConfig
 ) -> AnnotateReport:
     repo = ports.open_books(slug)
     structure = repo.get_structure(slug)
@@ -79,12 +91,14 @@ def annotate_book(
     annotation = _annotate_structure(structure, analyzer)
     refined, overrides = _refine(annotation, analyzer, support.lexicon, arbiter)
     reunited = _reunite(refined, support.inventory, support.lexicon, arbiter)
-    units = segment_annotation(reunited, segmentation)
+    units = segment_annotation(reunited, config.segmentation)
     segmented = reunited.model_copy(update={"sense_units": units})
-    done = _with_gloss_plan(ports, structure, segmented, gloss)
+    done = _with_gloss_plan(ports, structure, segmented, config.gloss)
+    grouped = group_passages(structure, config.grouping)
     repo.replace_annotation(slug, done)
     repo.replace_overrides(slug, overrides)
-    return _report(slug, structure, done, overrides)
+    repo.replace_passages(slug, grouped)
+    return _report(slug, grouped, done, overrides)
 
 
 def render_annotate_report(report: AnnotateReport) -> str:
@@ -97,6 +111,7 @@ def render_annotate_report(report: AnnotateReport) -> str:
         f"verb_particles: {report.particle_count}\n"
         f"sense_units: {report.sense_unit_count}\n"
         f"gloss_plan: {report.gloss_count}\n"
+        f"passages: {report.passage_count}\n"
     )
 
 
@@ -153,6 +168,7 @@ def _report(
         particle_count=len(done.particles),
         sense_unit_count=len(done.sense_units),
         gloss_count=len(done.gloss_plan),
+        passage_count=len(structure.passages),
     )
 
 

@@ -5,13 +5,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from frank.domain.errors import DbError, FrankError
 from frank.domain.model.annotation import Annotation, GlossDecision, SenseUnit, Token
-from frank.domain.model.book import BookStatus, BookStructure, Sentence
+from frank.domain.model.book import BookStatus, BookStructure, Passage, Sentence
 from frank.domain.model.lemma import LemmaOverride
 from frank.domain.model.reunion import VerbParticle
 from frank.domain.model.run import Run, RunFailure, RunStatus, RunTally
@@ -22,12 +22,14 @@ from frank.infrastructure.persistence.mappers import (
     override_from_row,
     paragraph_from_row,
     particle_from_row,
+    passage_from_row,
     row_from_book,
     row_from_chapter,
     row_from_gloss_decision,
     row_from_override,
     row_from_paragraph,
     row_from_particle,
+    row_from_passage,
     row_from_run,
     row_from_sense_unit,
     row_from_sentence,
@@ -43,6 +45,7 @@ from frank.infrastructure.persistence.tables import (
     GlossPlanRow,
     LemmaOverrideRow,
     ParagraphRow,
+    PassageRow,
     RunRow,
     SenseUnitRow,
     SentenceRow,
@@ -150,10 +153,17 @@ class SqliteBookRepository:
                 .where(ChapterRow.book_id == book_row.id)
                 .order_by(ChapterRow.index, ParagraphRow.index)
             ).all()
+            passage_rows = session.scalars(
+                select(PassageRow)
+                .join(ChapterRow, PassageRow.chapter_id == ChapterRow.id)
+                .where(ChapterRow.book_id == book_row.id)
+                .order_by(ChapterRow.index, PassageRow.index)
+            ).all()
             return BookStructure(
                 book=book_from_row(book_row),
                 chapters=tuple(chapter_from_row(row) for row in chapter_rows),
                 paragraphs=tuple(paragraph_from_row(row) for row in paragraph_rows),
+                passages=tuple(passage_from_row(row) for row in passage_rows),
             )
 
     def set_status(self, slug: str, status: BookStatus) -> None:
@@ -259,6 +269,36 @@ class SqliteBookRepository:
             ).all()
             return tuple(gloss_decision_from_row(row) for row in rows)
 
+    def replace_passages(self, slug: str, structure: BookStructure) -> None:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            chapter_ids = session.scalars(
+                select(ChapterRow.id).where(ChapterRow.book_id == book_id)
+            ).all()
+            if chapter_ids:
+                session.execute(
+                    update(ParagraphRow)
+                    .where(ParagraphRow.chapter_id.in_(chapter_ids))
+                    .values(passage_id=None)
+                )
+                session.execute(
+                    delete(PassageRow).where(PassageRow.chapter_id.in_(chapter_ids))
+                )
+            session.add_all([row_from_passage(item) for item in structure.passages])
+            _set_passage_ids(session, structure)
+            session.commit()
+
+    def get_passages(self, slug: str) -> tuple[Passage, ...]:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            rows = session.scalars(
+                select(PassageRow)
+                .join(ChapterRow, PassageRow.chapter_id == ChapterRow.id)
+                .where(ChapterRow.book_id == book_id)
+                .order_by(ChapterRow.index, PassageRow.index)
+            ).all()
+            return tuple(passage_from_row(row) for row in rows)
+
     def replace_overrides(
         self, slug: str, overrides: tuple[LemmaOverride, ...]
     ) -> None:
@@ -279,6 +319,15 @@ class SqliteBookRepository:
             return tuple(override_from_row(row) for row in rows)
 
 
+def _set_passage_ids(session: Session, structure: BookStructure) -> None:
+    for paragraph in structure.paragraphs:
+        session.execute(
+            update(ParagraphRow)
+            .where(ParagraphRow.id == paragraph.id)
+            .values(passage_id=paragraph.passage_id)
+        )
+
+
 def _wipe_book(session: Session, slug: str) -> None:
     book = session.scalar(select(BookRow).where(BookRow.slug == slug))
     if book is None:
@@ -291,6 +340,9 @@ def _wipe_book(session: Session, slug: str) -> None:
     if chapter_ids:
         session.execute(
             delete(ParagraphRow).where(ParagraphRow.chapter_id.in_(chapter_ids))
+        )
+        session.execute(
+            delete(PassageRow).where(PassageRow.chapter_id.in_(chapter_ids))
         )
         session.execute(delete(ChapterRow).where(ChapterRow.book_id == book.id))
     session.execute(delete(BookRow).where(BookRow.id == book.id))

@@ -9,6 +9,7 @@ from typing import Annotated
 import typer
 
 from frank.application.annotate_chapter import (
+    AnnotateConfig,
     AnnotatePorts,
     LemmaSupport,
     annotate_book,
@@ -23,6 +24,7 @@ from frank.application.ingest_book import (
 )
 from frank.config import Settings, load_settings
 from frank.domain.model.annotation import GlossPlanConfig, SegmentationConfig
+from frank.domain.model.book import PassageGroupingConfig
 from frank.infrastructure.llm.benchmark import (
     BenchPlan,
     load_gold_files,
@@ -143,13 +145,10 @@ def annotate(
     slug: Annotated[str, typer.Argument(help="Book slug under books/")],
     config: Annotated[Path, typer.Option("--config")] = Path("config.toml"),
 ) -> None:
-    """Annotate sentences, tokens, lemmas, sense units, and a gloss plan."""
+    """Annotate sentences, tokens, lemmas, sense units, glosses, and passages."""
     settings = load_settings(config)
     report = annotate_book(
-        _annotate_ports(settings, slug),
-        slug,
-        _segmentation(settings),
-        _gloss_config(settings),
+        _annotate_ports(settings, slug), slug, _annotate_config(settings)
     )
     typer.echo(render_annotate_report(report))
 
@@ -196,6 +195,23 @@ def _gloss_config(settings: Settings) -> GlossPlanConfig:
         quota_chapter_start=gloss.quota_chapter_start,
         quota_last_third=gloss.quota_last_third,
         rare_morph_max_count=gloss.rare_morph_max_count,
+    )
+
+
+def _annotate_config(settings: Settings) -> AnnotateConfig:
+    return AnnotateConfig(
+        segmentation=_segmentation(settings),
+        gloss=_gloss_config(settings),
+        grouping=_grouping(settings),
+    )
+
+
+def _grouping(settings: Settings) -> PassageGroupingConfig:
+    passage = settings.passage
+    return PassageGroupingConfig(
+        min_chars=passage.min_chars,
+        max_chars=passage.max_chars,
+        dialogue_max_chars=passage.dialogue_max_chars,
     )
 
 
