@@ -5,11 +5,17 @@ from __future__ import annotations
 from typing import Protocol
 
 from frank.domain.model.annotation import Annotation, GlossDecision, SenseUnit, Token
-from frank.domain.model.book import BookStatus, BookStructure, Passage, Sentence
+from frank.domain.model.book import (
+    BookStatus,
+    BookStructure,
+    Chapter,
+    Passage,
+    Sentence,
+)
 from frank.domain.model.lemma import LemmaOverride
 from frank.domain.model.reunion import VerbParticle
 from frank.domain.model.run import Run, RunFailure, RunTally
-from frank.domain.model.termbase import AddressPair, Character, Term
+from frank.domain.model.termbase import AddressPair, Character, StyleCard, Term
 
 
 class RunRepository(Protocol):
@@ -35,6 +41,9 @@ class BookRepository(Protocol):
         self, slug: str, overrides: tuple[LemmaOverride, ...]
     ) -> None: ...
     def get_overrides(self, slug: str) -> tuple[LemmaOverride, ...]: ...
+    def set_chapter_summaries(
+        self, slug: str, chapters: tuple[Chapter, ...]
+    ) -> None: ...
 
 
 class TermbaseRepository(Protocol):
@@ -48,3 +57,5 @@ class TermbaseRepository(Protocol):
         self, slug: str, pairs: tuple[AddressPair, ...]
     ) -> None: ...
     def get_address_pairs(self, slug: str) -> tuple[AddressPair, ...]: ...
+    def replace_style_card(self, slug: str, card: StyleCard) -> None: ...
+    def get_style_card(self, slug: str) -> StyleCard | None: ...

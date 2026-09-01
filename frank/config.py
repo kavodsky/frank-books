@@ -88,6 +88,10 @@ class TermbaseSettings(BaseModel):
     character_map_batch_size: int = Field(ge=1, le=50)
     evidence_sentences_per_pair: int = Field(ge=1, le=20)
     address_map_batch_size: int = Field(ge=1, le=50)
+    summary_lead_sentences: int = Field(ge=1, le=50)
+    summary_tail_sentences: int = Field(ge=1, le=50)
+    summary_sentence_min: int = Field(ge=1, le=20)
+    summary_sentence_max: int = Field(ge=1, le=20)
 
 
 class Settings(BaseSettings):

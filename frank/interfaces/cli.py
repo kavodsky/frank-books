@@ -25,6 +25,11 @@ from frank.application.build_characters import (
     build_character_registry,
     render_character_report,
 )
+from frank.application.build_style import (
+    StylePorts,
+    build_style_card,
+    render_style_report,
+)
 from frank.application.build_termbase import (
     TermbasePorts,
     TranslatePorts,
@@ -45,6 +50,7 @@ from frank.domain.model.annotation import GlossPlanConfig, SegmentationConfig
 from frank.domain.model.book import PassageGroupingConfig
 from frank.domain.model.termbase import (
     AddressMatrixConfig,
+    ChapterBriefConfig,
     CharacterEvidenceConfig,
     TermCollectConfig,
 )
@@ -71,6 +77,7 @@ from frank.infrastructure.nlp.lexicon import (
 )
 from frank.infrastructure.nlp.load import load_analyzer
 from frank.infrastructure.nlp.prefixes import load_inventory
+from frank.infrastructure.nlp.style_builder import SmartStyleBuilder, StyleConfig
 from frank.infrastructure.nlp.term_translator import (
     SmartTermTranslator,
     TranslateConfig,
@@ -197,7 +204,7 @@ def terms(
     slug: Annotated[str, typer.Argument(help="Book slug under books/")],
     config: Annotated[Path, typer.Option("--config")] = Path("config.toml"),
 ) -> None:
-    """Collect terms, characters, and the T/V address matrix."""
+    """Collect terms, characters, T/V matrix, summaries, and the style card."""
     settings = load_settings(config)
     collected = build_termbase(_termbase_ports(settings), slug, _term_config(settings))
     translated = translate_termbase(_translate_ports(settings, slug), slug)
@@ -207,11 +214,15 @@ def terms(
     addresses = build_address_matrix(
         _address_ports(settings, slug), slug, _address_config(settings)
     )
+    style = build_style_card(
+        _style_ports(settings, slug), slug, _brief_config(settings)
+    )
     typer.echo(
         render_termbase_report(collected)
         + render_translate_report(translated)
         + render_character_report(characters)
         + render_address_report(addresses)
+        + render_style_report(style)
     )
 
 
@@ -376,6 +387,47 @@ def _address_resolver(settings: Settings, slug: str) -> SmartAddressResolver:
         ),
         cache=StepCache(_BOOKS_DIR / slug / "cache"),
     )
+
+
+def _style_ports(settings: Settings, slug: str) -> StylePorts:
+    builder = _style_builder(settings, slug)
+    return StylePorts(
+        open_books=_open_books,
+        open_terms=_open_books,
+        summarizer=builder,
+        composer=builder,
+        write_markdown=_write_style_markdown,
+    )
+
+
+def _brief_config(settings: Settings) -> ChapterBriefConfig:
+    termbase = settings.termbase
+    return ChapterBriefConfig(
+        lead_sentences=termbase.summary_lead_sentences,
+        tail_sentences=termbase.summary_tail_sentences,
+        summary_sentence_min=termbase.summary_sentence_min,
+        summary_sentence_max=termbase.summary_sentence_max,
+    )
+
+
+def _style_builder(settings: Settings, slug: str) -> SmartStyleBuilder:
+    termbase = settings.termbase
+    return SmartStyleBuilder(
+        client=chat_client_from_settings(settings, _BOOKS_DIR / slug / "logs"),
+        config=StyleConfig(
+            model=settings.smart.name,
+            base_url=settings.smart.base_url,
+            timeout_seconds=settings.budgets.llm_timeout_seconds,
+            slug=slug,
+            summary_sentence_min=termbase.summary_sentence_min,
+            summary_sentence_max=termbase.summary_sentence_max,
+        ),
+        cache=StepCache(_BOOKS_DIR / slug / "cache"),
+    )
+
+
+def _write_style_markdown(slug: str, markdown: str) -> None:
+    (_BOOKS_DIR / slug / "style_card.md").write_text(markdown, encoding="utf-8")
 
 
 def _lemma_arbiter(settings: Settings, slug: str, lang: str) -> SmartLemmaArbiter:

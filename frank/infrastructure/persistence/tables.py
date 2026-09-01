@@ -163,6 +163,18 @@ class AddressPairRow(Base):
     tv_form: Mapped[str]
 
 
+class StyleCardRow(Base):
+    __tablename__ = "style_card"
+
+    book_id: Mapped[str] = mapped_column(ForeignKey("book.id"), primary_key=True)
+    epoch: Mapped[str]
+    setting: Mapped[str]
+    source_register: Mapped[str]
+    narration: Mapped[str]
+    tone: Mapped[str]
+    directives: Mapped[str] = mapped_column(Text)
+
+
 class GlossUnitRow(Base):
     __tablename__ = "gloss_unit"
 

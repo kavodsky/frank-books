@@ -30,6 +30,7 @@ from frank.domain.model.termbase import (
     AddressPair,
     Character,
     Gender,
+    StyleCard,
     Term,
     TermKind,
     TvForm,
@@ -46,6 +47,7 @@ from frank.infrastructure.persistence.tables import (
     RunRow,
     SenseUnitRow,
     SentenceRow,
+    StyleCardRow,
     TermRow,
     TokenRow,
     VerbParticleRow,
@@ -371,4 +373,28 @@ def row_from_address_pair(item: AddressPair) -> AddressPairRow:
         speaker_id=item.speaker_id,
         addressee_id=item.addressee_id,
         tv_form=item.tv_form.value,
+    )
+
+
+def style_card_from_row(row: StyleCardRow) -> StyleCard:
+    return StyleCard(
+        book_id=row.book_id,
+        epoch=row.epoch,
+        setting=row.setting,
+        source_register=row.source_register,
+        narration=row.narration,
+        tone=row.tone,
+        directives=row.directives,
+    )
+
+
+def row_from_style_card(item: StyleCard) -> StyleCardRow:
+    return StyleCardRow(
+        book_id=item.book_id,
+        epoch=item.epoch,
+        setting=item.setting,
+        source_register=item.source_register,
+        narration=item.narration,
+        tone=item.tone,
+        directives=item.directives,
     )

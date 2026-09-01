@@ -230,6 +230,17 @@ Nicknames stay apart (`Sanyi` ≠ `Sándor`). PERSON/PLACE/ORG persist only at
 lexicon (NOUN/VERB/ADJ) become DISAMBIG. Idiom candidates come from the static
 idiom list (empty until lists exist), not from the LLM.
 
+## 15. Chapter summaries and StyleCard
+
+[`domain/services/chapter_briefs.py`, `domain/services/style_card.py`, roadmap 3.5]
+
+SMART never sees the full chapter (ADR 0017). Input is lead + tail sentences plus
+Character names that occur in that span. The summary is 3–5 Ukrainian plot
+sentences; use the given Ukrainian names. Reduce over those summaries plus
+title/author into a StyleCard (epoch, setting, register, narration, tone,
+directives). Directives keep glosses in modern Ukrainian even when doubling has
+archaic flavour (section 10).
+
 ---
 
 ## Open questions
@@ -278,3 +289,7 @@ and note it.
   Conservative: speech-opener paragraphs, same-sentence attribution, SMART only
   for known pairs with unknown form (ADR 0016). Unidentified speakers are dropped,
   not stored as MIXED.
+- Chapter summary: full chapter text, or a sample? Conservative: lead + tail
+  sentences plus names in that span, never the middle (ADR 0017).
+- StyleCard from source excerpts, or from chapter summaries? Conservative: reduce
+  over title/author and the Ukrainian summaries only.

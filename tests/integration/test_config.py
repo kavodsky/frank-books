@@ -43,6 +43,10 @@ def test_example_config_loads(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.termbase.character_map_batch_size == 10
     assert settings.termbase.evidence_sentences_per_pair == 3
     assert settings.termbase.address_map_batch_size == 10
+    assert settings.termbase.summary_lead_sentences == 8
+    assert settings.termbase.summary_tail_sentences == 8
+    assert settings.termbase.summary_sentence_min == 3
+    assert settings.termbase.summary_sentence_max == 5
     assert settings.fast.api_key is None
     assert settings.smart.api_key is None
 

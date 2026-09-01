@@ -11,11 +11,17 @@ from sqlalchemy.orm import Session
 
 from frank.domain.errors import DbError, FrankError
 from frank.domain.model.annotation import Annotation, GlossDecision, SenseUnit, Token
-from frank.domain.model.book import BookStatus, BookStructure, Passage, Sentence
+from frank.domain.model.book import (
+    BookStatus,
+    BookStructure,
+    Chapter,
+    Passage,
+    Sentence,
+)
 from frank.domain.model.lemma import LemmaOverride
 from frank.domain.model.reunion import VerbParticle
 from frank.domain.model.run import Run, RunFailure, RunStatus, RunTally
-from frank.domain.model.termbase import AddressPair, Character, Term
+from frank.domain.model.termbase import AddressPair, Character, StyleCard, Term
 from frank.infrastructure.persistence.mappers import (
     address_pair_from_row,
     book_from_row,
@@ -38,11 +44,13 @@ from frank.infrastructure.persistence.mappers import (
     row_from_run,
     row_from_sense_unit,
     row_from_sentence,
+    row_from_style_card,
     row_from_term,
     row_from_token,
     run_from_row,
     sense_unit_from_row,
     sentence_from_row,
+    style_card_from_row,
     term_from_row,
     token_from_row,
 )
@@ -58,6 +66,7 @@ from frank.infrastructure.persistence.tables import (
     RunRow,
     SenseUnitRow,
     SentenceRow,
+    StyleCardRow,
     TermRow,
     TokenRow,
     VerbParticleRow,
@@ -380,6 +389,31 @@ class SqliteBookRepository:
             ).all()
             return tuple(address_pair_from_row(row) for row in rows)
 
+    def set_chapter_summaries(self, slug: str, chapters: tuple[Chapter, ...]) -> None:
+        with Session(self._engine) as session:
+            _book_id(session, slug)
+            for chapter in chapters:
+                row = session.get(ChapterRow, chapter.id)
+                if row is None:
+                    continue
+                row.summary_uk = chapter.summary_uk
+            session.commit()
+
+    def replace_style_card(self, slug: str, card: StyleCard) -> None:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            session.execute(delete(StyleCardRow).where(StyleCardRow.book_id == book_id))
+            session.add(row_from_style_card(card))
+            session.commit()
+
+    def get_style_card(self, slug: str) -> StyleCard | None:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            row = session.get(StyleCardRow, book_id)
+            if row is None:
+                return None
+            return style_card_from_row(row)
+
 
 def _set_passage_ids(session: Session, structure: BookStructure) -> None:
     for paragraph in structure.paragraphs:
@@ -396,6 +430,7 @@ def _wipe_book(session: Session, slug: str) -> None:
         return
     _delete_sentences(session, book.id)
     session.execute(delete(LemmaOverrideRow))
+    session.execute(delete(StyleCardRow))
     session.execute(delete(AddressPairRow))
     session.execute(delete(CharacterRow))
     session.execute(delete(TermRow))

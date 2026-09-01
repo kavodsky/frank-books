@@ -9,8 +9,11 @@ from frank.domain.model.lemma import DisputedLemma, LemmaOverride
 from frank.domain.model.reunion import ReunionCandidate, VerbParticle
 from frank.domain.model.termbase import (
     AddressPair,
+    ChapterBrief,
     ChapterEvidence,
     CharacterDraft,
+    StyleCard,
+    StyleReduceInput,
     Term,
     TermRendering,
     UnresolvedPair,
@@ -51,3 +54,11 @@ class AddressResolver(Protocol):
     def resolve(
         self, pairs: tuple[UnresolvedPair, ...], lang: str
     ) -> tuple[AddressPair, ...]: ...
+
+
+class ChapterSummarizer(Protocol):
+    def summarize(self, brief: ChapterBrief) -> str: ...
+
+
+class StyleComposer(Protocol):
+    def compose(self, payload: StyleReduceInput) -> StyleCard: ...

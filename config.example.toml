@@ -72,3 +72,7 @@ evidence_sentences_per_person = 3
 character_map_batch_size = 10
 evidence_sentences_per_pair = 3
 address_map_batch_size = 10
+summary_lead_sentences = 8
+summary_tail_sentences = 8
+summary_sentence_min = 3
+summary_sentence_max = 5

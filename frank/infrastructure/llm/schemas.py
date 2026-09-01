@@ -71,6 +71,19 @@ class AddressBatchResult(BaseModel):
     items: list[AddressProposal]
 
 
+class ChapterSummaryResult(BaseModel):
+    summary_uk: str
+
+
+class StyleCardProposal(BaseModel):
+    epoch: str
+    setting: str
+    source_register: str
+    narration: str
+    tone: str
+    directives: str
+
+
 def openai_strict_schema(schema: dict[str, object]) -> dict[str, object]:
     """Pydantic fields stay the source; OpenAI requires additionalProperties: false."""
     strict = _strict_node(schema)

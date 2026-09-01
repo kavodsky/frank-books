@@ -1,4 +1,4 @@
-"""Termbase, Character registry, and AddressPair value objects (roadmap 3.1–3.4)."""
+"""Termbase, Character registry, AddressPair, and StyleCard (roadmap 3.1–3.5)."""
 
 from __future__ import annotations
 
@@ -153,3 +153,61 @@ class TermCollectConfig(BaseModel):
     idiom_min_occurrences: int
     merge_max_edit_distance: int
     merge_min_stem_chars: int
+
+
+class BriefCharacter(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    canonical_name: str
+    translation_uk: str
+
+
+class ChapterBrief(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    chapter_id: str
+    index: int
+    title: str
+    lang: str
+    lead: tuple[str, ...]
+    tail: tuple[str, ...]
+    characters: tuple[BriefCharacter, ...]
+
+
+class ChapterBriefConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    lead_sentences: int
+    tail_sentences: int
+    summary_sentence_min: int
+    summary_sentence_max: int
+
+
+class ChapterSummary(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    index: int
+    title: str
+    summary_uk: str
+
+
+class StyleCard(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    book_id: str
+    epoch: str
+    setting: str
+    source_register: str
+    narration: str
+    tone: str
+    directives: str
+
+
+class StyleReduceInput(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    book_id: str
+    title: str
+    author: str
+    lang: str
+    summaries: tuple[ChapterSummary, ...]
