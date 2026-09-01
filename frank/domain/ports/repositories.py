@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from frank.domain.model.annotation import Annotation, SenseUnit, Token
+from frank.domain.model.annotation import Annotation, GlossDecision, SenseUnit, Token
 from frank.domain.model.book import BookStatus, BookStructure, Sentence
 from frank.domain.model.lemma import LemmaOverride
 from frank.domain.model.reunion import VerbParticle
@@ -27,6 +27,7 @@ class BookRepository(Protocol):
     def get_tokens(self, slug: str) -> tuple[Token, ...]: ...
     def get_particles(self, slug: str) -> tuple[VerbParticle, ...]: ...
     def get_sense_units(self, slug: str) -> tuple[SenseUnit, ...]: ...
+    def get_gloss_plan(self, slug: str) -> tuple[GlossDecision, ...]: ...
     def replace_overrides(
         self, slug: str, overrides: tuple[LemmaOverride, ...]
     ) -> None: ...

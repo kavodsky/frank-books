@@ -6,7 +6,14 @@ import json
 from datetime import UTC, datetime
 
 from frank.domain.errors import ErrorClass
-from frank.domain.model.annotation import MorphFeature, Morphology, SenseUnit, Token
+from frank.domain.model.annotation import (
+    GlossDecision,
+    GlossReason,
+    MorphFeature,
+    Morphology,
+    SenseUnit,
+    Token,
+)
 from frank.domain.model.book import (
     Book,
     BookStatus,
@@ -21,6 +28,7 @@ from frank.domain.model.run import Run, RunStatus
 from frank.infrastructure.persistence.tables import (
     BookRow,
     ChapterRow,
+    GlossPlanRow,
     LemmaOverrideRow,
     ParagraphRow,
     RunRow,
@@ -201,6 +209,22 @@ def row_from_sense_unit(unit: SenseUnit) -> SenseUnitRow:
         index=unit.index,
         start_index=unit.start_index,
         end_index=unit.end_index,
+    )
+
+
+def gloss_decision_from_row(row: GlossPlanRow) -> GlossDecision:
+    return GlossDecision(
+        token_id=row.token_id,
+        gloss=row.gloss,
+        reason=GlossReason(row.reason),
+    )
+
+
+def row_from_gloss_decision(item: GlossDecision) -> GlossPlanRow:
+    return GlossPlanRow(
+        token_id=item.token_id,
+        gloss=item.gloss,
+        reason=item.reason.value,
     )
 
 

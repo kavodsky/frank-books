@@ -114,6 +114,16 @@ class SenseUnitRow(Base):
     end_index: Mapped[int]
 
 
+class GlossPlanRow(Base):
+    __tablename__ = "gloss_plan"
+
+    token_id: Mapped[str] = mapped_column(
+        String, ForeignKey("token.id"), primary_key=True
+    )
+    gloss: Mapped[bool]
+    reason: Mapped[str]
+
+
 class TermRow(Base):
     __tablename__ = "term"
 

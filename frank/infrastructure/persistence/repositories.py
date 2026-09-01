@@ -10,7 +10,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from frank.domain.errors import DbError, FrankError
-from frank.domain.model.annotation import Annotation, SenseUnit, Token
+from frank.domain.model.annotation import Annotation, GlossDecision, SenseUnit, Token
 from frank.domain.model.book import BookStatus, BookStructure, Sentence
 from frank.domain.model.lemma import LemmaOverride
 from frank.domain.model.reunion import VerbParticle
@@ -18,11 +18,13 @@ from frank.domain.model.run import Run, RunFailure, RunStatus, RunTally
 from frank.infrastructure.persistence.mappers import (
     book_from_row,
     chapter_from_row,
+    gloss_decision_from_row,
     override_from_row,
     paragraph_from_row,
     particle_from_row,
     row_from_book,
     row_from_chapter,
+    row_from_gloss_decision,
     row_from_override,
     row_from_paragraph,
     row_from_particle,
@@ -38,6 +40,7 @@ from frank.infrastructure.persistence.mappers import (
 from frank.infrastructure.persistence.tables import (
     BookRow,
     ChapterRow,
+    GlossPlanRow,
     LemmaOverrideRow,
     ParagraphRow,
     RunRow,
@@ -171,6 +174,9 @@ class SqliteBookRepository:
             session.add_all(
                 [row_from_sense_unit(item) for item in annotation.sense_units]
             )
+            session.add_all(
+                [row_from_gloss_decision(item) for item in annotation.gloss_plan]
+            )
             session.commit()
 
     def get_sentences(self, slug: str) -> tuple[Sentence, ...]:
@@ -234,6 +240,25 @@ class SqliteBookRepository:
             ).all()
             return tuple(sense_unit_from_row(row) for row in rows)
 
+    def get_gloss_plan(self, slug: str) -> tuple[GlossDecision, ...]:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            rows = session.scalars(
+                select(GlossPlanRow)
+                .join(TokenRow, GlossPlanRow.token_id == TokenRow.id)
+                .join(SentenceRow, TokenRow.sentence_id == SentenceRow.id)
+                .join(ParagraphRow, SentenceRow.paragraph_id == ParagraphRow.id)
+                .join(ChapterRow, ParagraphRow.chapter_id == ChapterRow.id)
+                .where(ChapterRow.book_id == book_id)
+                .order_by(
+                    ChapterRow.index,
+                    ParagraphRow.index,
+                    SentenceRow.index,
+                    TokenRow.index,
+                )
+            ).all()
+            return tuple(gloss_decision_from_row(row) for row in rows)
+
     def replace_overrides(
         self, slug: str, overrides: tuple[LemmaOverride, ...]
     ) -> None:
@@ -291,6 +316,13 @@ def _delete_sentences(session: Session, book_id: str) -> None:
     ).all()
     if not sentence_ids:
         return
+    token_ids = session.scalars(
+        select(TokenRow.id).where(TokenRow.sentence_id.in_(sentence_ids))
+    ).all()
+    if token_ids:
+        session.execute(
+            delete(GlossPlanRow).where(GlossPlanRow.token_id.in_(token_ids))
+        )
     session.execute(
         delete(SenseUnitRow).where(SenseUnitRow.sentence_id.in_(sentence_ids))
     )

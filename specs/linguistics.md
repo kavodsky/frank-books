@@ -114,14 +114,40 @@ deterministic on the dependency parse (German TIGER-style labels from
 - Infinitival complements stay with their finite governor
   (``die ich nicht bezeichnen will`` is one relative unit).
 
-## 7. Definiteness (Hungarian)
+## 7. Gloss planning
+
+[`domain/services/gloss_planning.py`, roadmap 2.4]
+
+A sequential reading-order pass decides which tokens get a word note later. No LLM.
+Keys are the reunited lemma when 2.2c set one (`anrufen`, not `rufen`).
+
+- NEVER: punctuation; the first `function_word_top_n` lemmas of the ranked
+  frequency list (`der` / `a` / `az`), except proper names.
+- GLOSS `first_occurrence` of a lemma outside `frequency_top_n`. Proper names
+  (`PROPN`) gloss on first sight even when the lemma is in that list, and never
+  again. If quota drops that first token, the next token of the same lemma retries
+  until one gloss is kept.
+- GLOSS `reminder` when the last kept gloss of that lemma is at least
+  `reminder_gap_sentences` book-level sentence ordinals ago and the lemma occurs
+  fewer than `reminder_max_occurrences` times in the book.
+- ALWAYS (locked; survive the per-sentence quota): termbase idiom hits; false
+  friends from `data/{lang}_false_friends.toml`; first occurrence of a reunited
+  separable-verb / igekötő lemma (`morph_trap`); Hungarian tokens whose non-empty
+  morph feature-set appears at most `rare_morph_max_count` times in the book
+  (first `(lemma, signature)` only).
+- Per-sentence quota shrinks with chapter index (`quota_chapter_start` in
+  chapter 1 → `quota_last_third` from the last third). Over quota: drop reminders
+  first, then the most frequent remaining `first_occurrence`. Books with fewer
+  than three chapters keep the start quota.
+
+## 8. Definiteness (Hungarian)
 
 The definite/indefinite conjugation (`olvasok` vs `olvasom`) has no Ukrainian
 equivalent and is invisible in translation. Gloss it on first occurrence and then
 NEVER again — it is grammar trivia that would clutter every page. [gloss reason
 `morph_trap`, quota-limited]
 
-## 8. Word order and the literal layer
+## 9. Word order and the literal layer
 
 The `word_for_word_uk` layer exists to expose the source's structure, so it must
 follow source order even when the result is awkward Ukrainian — that awkwardness
@@ -135,7 +161,7 @@ is pedagogically the point (see the reference: *просто живу в соб�
   German trigger; Hungarian topic-focus order and heavy pre-modifiers are the main
   Hungarian trigger.
 
-## 9. Register and archaism
+## 10. Register and archaism
 
 - Source archaism is reflected in the ORIGINAL (untouched) and lightly in
   `natural_uk`; glosses and grammar notes are always in plain modern Ukrainian.
@@ -143,7 +169,7 @@ is pedagogically the point (see the reference: *просто живу в соб�
 - Dialect and sociolect: translate the meaning, and note the register in the gloss
   («просторічно», «діалектне»), rather than substituting a Ukrainian dialect.
 
-## 10. Idioms
+## 11. Idioms
 
 - An idiom gets `natural_uk` = the Ukrainian equivalent idiom (if one exists) and
   `word_for_word_uk` = the literal image, because the literal image is what makes
@@ -151,7 +177,7 @@ is pedagogically the point (see the reference: *просто живу в соб�
   виправить»; literal: «з собаки не буде сала».
 - Idioms are always glossed regardless of quota (roadmap 2.4).
 
-## 11. Russian interference (critical)
+## 12. Russian interference (critical)
 
 Local models drift into Russian on Ukrainian output, especially in long runs, and
 partially — a Russian word inside a Ukrainian sentence. Beyond the character-set
@@ -182,3 +208,9 @@ and note it.
 - Sense-unit length counts non-punctuation tokens. Should a comma-only split
   fire when a unit is still over `sense_unit_max_tokens` after clause and heavy-PP
   cuts? Conservative: leave the oversized unit intact.
+- Roadmap 2.4 says morphological traps are ALWAYS glossed (locked, survive quota).
+  §8 says Hungarian definiteness is `morph_trap` and quota-limited. Conservative:
+  do not special-case `Definite=`; definite conjugation is common, so the rare-morph
+  rule does not fire. Reunited-verb and rare-morph traps follow the roadmap ALWAYS.
+- If quota drops a `first_occurrence`, is the next token of that lemma still a
+  first occurrence? Conservative: yes, until one gloss of that lemma is kept.

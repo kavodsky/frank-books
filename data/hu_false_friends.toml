@@ -1,0 +1,13 @@
+# Hungarian lemmas that look like Ukrainian/international cognates but are not.
+# Gloss planning (2.4) always marks these, even when they sit in the frequency list.
+lemmas = [
+  "villa",
+  "kamera",
+  "szalon",
+  "aktuális",
+  "szimpatikus",
+  "direkt",
+  "família",
+  "paszport",
+  "szalvéta",
+]

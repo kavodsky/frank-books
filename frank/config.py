@@ -61,6 +61,16 @@ class NlpSettings(BaseModel):
     heavy_pp_min_tokens: int = Field(ge=1)
 
 
+class GlossSettings(BaseModel):
+    frequency_top_n: int = Field(ge=1)
+    function_word_top_n: int = Field(ge=1)
+    reminder_gap_sentences: int = Field(ge=1)
+    reminder_max_occurrences: int = Field(ge=1)
+    quota_chapter_start: int = Field(ge=1)
+    quota_last_third: int = Field(ge=1)
+    rare_morph_max_count: int = Field(ge=1)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="forbid")
 
@@ -72,6 +82,7 @@ class Settings(BaseSettings):
     languages: Languages
     ingest: IngestSettings
     nlp: NlpSettings
+    gloss: GlossSettings
 
 
 def load_settings(path: Path | None = None) -> Settings:

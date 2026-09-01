@@ -27,6 +27,7 @@ def test_phase0_ddl_creates_expected_tables(tmp_path) -> None:
         "sentence",
         "token",
         "sense_unit",
+        "gloss_plan",
     } <= tables
 
 

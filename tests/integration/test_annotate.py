@@ -13,6 +13,9 @@ from frank.application.annotate_chapter import (
 )
 from frank.application.ingest_book import IngestPorts, IngestRequest, ingest_book
 from frank.domain.model.annotation import (
+    GlossLists,
+    GlossPlanConfig,
+    GlossReason,
     Morphology,
     ParsedSentence,
     ParsedToken,
@@ -30,6 +33,15 @@ _SEG = SegmentationConfig(
     unit_min_tokens=3,
     unit_max_tokens=8,
     heavy_pp_min_tokens=6,
+)
+_GLOSS = GlossPlanConfig(
+    frequency_top_n=1000,
+    function_word_top_n=300,
+    reminder_gap_sentences=400,
+    reminder_max_occurrences=4,
+    quota_chapter_start=6,
+    quota_last_third=2,
+    rare_morph_max_count=2,
 )
 
 
@@ -109,6 +121,7 @@ def _annotate_ports(tmp_path: Path) -> AnnotatePorts:
             inventory=load_inventory(lang),
         ),
         arbiter_for=lambda _lang: IdleArbiter(),
+        gloss_lists_for=lambda _lang: GlossLists(),
     )
 
 
@@ -148,8 +161,8 @@ def test_annotate_persists_german_and_hungarian_sentences(tmp_path) -> None:
         _ingest_ports(tmp_path, "hu"),
         _request(CHAPTERS / "hu_sample.txt", "hu-ch", "hu"),
     )
-    de = annotate_book(_annotate_ports(tmp_path), "de-ch", _SEG)
-    hu = annotate_book(_annotate_ports(tmp_path), "hu-ch", _SEG)
+    de = annotate_book(_annotate_ports(tmp_path), "de-ch", _SEG, _GLOSS)
+    hu = annotate_book(_annotate_ports(tmp_path), "hu-ch", _SEG, _GLOSS)
     repo_de = SqliteBookRepository(create_book_db(tmp_path / "de-ch" / "book.db"))
     repo_hu = SqliteBookRepository(create_book_db(tmp_path / "hu-ch" / "book.db"))
     assert de.sentence_count == 3
@@ -172,6 +185,11 @@ def test_annotate_persists_german_and_hungarian_sentences(tmp_path) -> None:
         "A királyfi elindult .",
         "Megérkezett a várba .",
     )
+    plan_de = repo_de.get_gloss_plan("de-ch")
+    assert de.gloss_count == 13
+    assert hu.gloss_count > 0
+    assert len(plan_de) == de.gloss_count
+    assert all(item.gloss for item in plan_de)
 
 
 @pytest.mark.integration
@@ -181,27 +199,31 @@ def test_annotate_is_idempotent(tmp_path) -> None:
         _request(CHAPTERS / "de_sample.txt", "same", "de"),
     )
     ports = _annotate_ports(tmp_path)
-    first = annotate_book(ports, "same", _SEG)
-    second = annotate_book(ports, "same", _SEG)
+    first = annotate_book(ports, "same", _SEG, _GLOSS)
     repo = SqliteBookRepository(create_book_db(tmp_path / "same" / "book.db"))
+    first_plan = repo.get_gloss_plan("same")
+    second = annotate_book(ports, "same", _SEG, _GLOSS)
     assert first.sentence_count == second.sentence_count
     assert first.token_count == second.token_count
     assert first.sense_unit_count == second.sense_unit_count
+    assert first.gloss_count == second.gloss_count
     assert len(repo.get_sentences("same")) == first.sentence_count
     assert len(repo.get_tokens("same")) == first.token_count
     assert len(repo.get_sense_units("same")) == first.sense_unit_count
+    assert repo.get_gloss_plan("same") == first_plan
 
 
 @pytest.mark.integration
 def test_reingest_drops_sentence_rows(tmp_path) -> None:
     request = _request(CHAPTERS / "de_sample.txt", "wipe", "de")
     ingest_book(_ingest_ports(tmp_path, "de"), request)
-    annotate_book(_annotate_ports(tmp_path), "wipe", _SEG)
+    annotate_book(_annotate_ports(tmp_path), "wipe", _SEG, _GLOSS)
     ingest_book(_ingest_ports(tmp_path, "de"), request)
     repo = SqliteBookRepository(create_book_db(tmp_path / "wipe" / "book.db"))
     assert repo.get_sentences("wipe") == ()
     assert repo.get_tokens("wipe") == ()
     assert repo.get_sense_units("wipe") == ()
+    assert repo.get_gloss_plan("wipe") == ()
 
 
 @pytest.mark.integration
@@ -210,7 +232,7 @@ def test_oliver_twist_annotate_tokens_all_have_lemmas(tmp_path) -> None:
         _ingest_ports(tmp_path, "de"),
         _request(CHAPTERS / "oliver_twist_de.txt", "oliver-de", "de"),
     )
-    report = annotate_book(_annotate_ports(tmp_path), "oliver-de", _SEG)
+    report = annotate_book(_annotate_ports(tmp_path), "oliver-de", _SEG, _GLOSS)
     repo = SqliteBookRepository(create_book_db(tmp_path / "oliver-de" / "book.db"))
     tokens = repo.get_tokens("oliver-de")
     assert report.token_count == len(tokens)
@@ -281,8 +303,9 @@ def test_annotate_persists_reunited_separable_verb(tmp_path) -> None:
             inventory=load_inventory(lang),
         ),
         arbiter_for=lambda _lang: IdleArbiter(),
+        gloss_lists_for=lambda _lang: GlossLists(),
     )
-    report = annotate_book(ports, "anrufen", _SEG)
+    report = annotate_book(ports, "anrufen", _SEG, _GLOSS)
     repo = SqliteBookRepository(create_book_db(tmp_path / "anrufen" / "book.db"))
     tokens = repo.get_tokens("anrufen")
     particles = repo.get_particles("anrufen")
@@ -291,3 +314,6 @@ def test_annotate_persists_reunited_separable_verb(tmp_path) -> None:
     assert verb.reunited_lemma == "anrufen"
     assert particles[0].reunited_lemma == "anrufen"
     assert particles[0].verb_token_id == verb.id
+    plan = {item.token_id: item for item in repo.get_gloss_plan("anrufen")}
+    assert plan[verb.id].reason is GlossReason.MORPH_TRAP
+    assert report.gloss_count == len(plan)

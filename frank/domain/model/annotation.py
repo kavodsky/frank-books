@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
+
 from pydantic import BaseModel, ConfigDict
 
 from frank.domain.model.book import Sentence
@@ -81,6 +83,50 @@ class SegmentationConfig(BaseModel):
     heavy_pp_min_tokens: int
 
 
+class GlossReason(StrEnum):
+    FIRST_OCCURRENCE = "first_occurrence"
+    REMINDER = "reminder"
+    IDIOM = "idiom"
+    FALSE_FRIEND = "false_friend"
+    MORPH_TRAP = "morph_trap"
+
+
+class GlossDecision(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    token_id: str
+    gloss: bool
+    reason: GlossReason
+
+
+class GlossPlanConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    frequency_top_n: int
+    function_word_top_n: int
+    reminder_gap_sentences: int
+    reminder_max_occurrences: int
+    quota_chapter_start: int
+    quota_last_third: int
+    rare_morph_max_count: int
+
+
+class GlossLists(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    ranked: tuple[str, ...] = ()
+    false_friends: tuple[str, ...] = ()
+    idioms: tuple[str, ...] = ()
+
+
+class SentencePlacement(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    sentence_id: str
+    ordinal: int
+    chapter_index: int
+
+
 class Annotation(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -88,3 +134,15 @@ class Annotation(BaseModel):
     tokens: tuple[Token, ...]
     particles: tuple[VerbParticle, ...] = ()
     sense_units: tuple[SenseUnit, ...] = ()
+    gloss_plan: tuple[GlossDecision, ...] = ()
+
+
+class GlossPlanRequest(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    annotation: Annotation
+    placements: tuple[SentencePlacement, ...]
+    chapter_count: int
+    lang: str
+    lists: GlossLists
+    config: GlossPlanConfig

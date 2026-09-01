@@ -27,6 +27,11 @@ def test_example_config_loads(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.nlp.sense_unit_min_tokens == 3
     assert settings.nlp.sense_unit_max_tokens == 8
     assert settings.nlp.heavy_pp_min_tokens == 6
+    assert settings.gloss.frequency_top_n == 1000
+    assert settings.gloss.function_word_top_n == 300
+    assert settings.gloss.reminder_gap_sentences == 400
+    assert settings.gloss.quota_chapter_start == 6
+    assert settings.gloss.quota_last_third == 2
     assert settings.fast.api_key is None
     assert settings.smart.api_key is None
 

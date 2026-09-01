@@ -46,3 +46,12 @@ short_sentence_max_tokens = 8
 sense_unit_min_tokens = 3
 sense_unit_max_tokens = 8
 heavy_pp_min_tokens = 6
+
+[gloss]
+frequency_top_n = 1000
+function_word_top_n = 300
+reminder_gap_sentences = 400
+reminder_max_occurrences = 4
+quota_chapter_start = 6
+quota_last_third = 2
+rare_morph_max_count = 2

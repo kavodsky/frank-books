@@ -1,0 +1,17 @@
+# German lemmas that look like Ukrainian/English cognates but are not.
+# Gloss planning (2.4) always marks these, even when they sit in the frequency list.
+lemmas = [
+  "bekommen",
+  "gift",
+  "brav",
+  "also",
+  "bald",
+  "fast",
+  "chef",
+  "eventuell",
+  "aktuell",
+  "sensibel",
+  "rock",
+  "wand",
+  "rat",
+]
