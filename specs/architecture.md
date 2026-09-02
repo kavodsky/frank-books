@@ -93,6 +93,7 @@ frank-books/
         annotation.py  #   Token, Morphology, SenseUnit, GlossDecision
         reunion.py     #   VerbParticle, PrefixInventory, ReunionCandidate
         frank.py       #   FrankRecord, SenseUnitTranslation, WordNote
+        layout.py      #   LayoutBook / LayoutRun tree (docx-ignorant)
         termbase.py    #   Term, Character, AddressPair, TvForm, StyleCard
         context.py     #   PromptContext and its budget sections
       services/        # pure domain logic — the real value of this layer
@@ -112,6 +113,8 @@ frank-books/
         reunification.py   # separable verb / igekötő pairing rules
         context_assembly.py# budgeted assembly (Phase 4) — pure function
         validation.py      # all Phase 5.2 predicates, pure
+        hard_sentences.py  # irrealis / hypotaxis / idiom → SMART
+        layout.py          # adapted/unadapted passage doubling (Phase 6)
       ports/           # abstract interfaces (Protocol / ABC) the domain needs
         repositories.py    # BookRepository, TermbaseRepository, FrankRecordRepository, GlossPlanRepository, RunRepository
         linguistics.py     # LinguisticAnalyzer (tokenize/parse/lemmatize/NER)
@@ -189,10 +192,12 @@ Tests mirror the layers, so a failing path tells you which layer broke:
       test_validation.py
       test_hard_sentences.py
       test_generate_passages.py
+      test_layout.py
     integration/     # infrastructure against real SQLite / a mocked LLM server
       test_repositories.py
       test_llm_generator.py
       test_generation_session.py
+      test_docx_render.py
       test_ingest.py
       test_termbase.py
       test_term_translate.py

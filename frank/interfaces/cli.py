@@ -51,6 +51,11 @@ from frank.application.ingest_book import (
     inspect_slug,
     render_inspect_report,
 )
+from frank.application.render_book import (
+    RenderPorts,
+    format_render_report,
+    render_book,
+)
 from frank.application.review_termbase import (
     ReviewPorts,
     approve_review,
@@ -100,6 +105,7 @@ from frank.infrastructure.persistence.repositories import (
     SqliteRunRepository,
 )
 from frank.infrastructure.persistence.tables import create_book_db
+from frank.infrastructure.rendering.docx_renderer import write_docx
 from frank.infrastructure.sources.fetch import LocalFileFetcher
 from frank.infrastructure.sources.raw_store import FilesystemRawStore
 
@@ -264,6 +270,20 @@ def status(
 ) -> None:
     """Passages done / total and passages-per-hour."""
     typer.echo(render_status(book_generation_status(_status_ports(), slug)), nl=False)
+
+
+@app.command()
+def render(
+    slug: Annotated[str, typer.Argument(help="Book slug under books/")],
+    docx: Annotated[
+        Path | None,
+        typer.Option("--docx", help="Write this path instead of books/<slug>/out/"),
+    ] = None,
+) -> None:
+    """Write a Frank .docx for every completed passage so far."""
+    out = _BOOKS_DIR / slug / "out" / f"{slug}.docx" if docx is None else docx
+    report = render_book(_render_ports(), slug, out)
+    typer.echo(format_render_report(report), nl=False)
 
 
 def _ports(settings: Settings) -> IngestPorts:
@@ -499,6 +519,14 @@ def _open_runs(slug: str) -> SqliteRunRepository:
 
 def _status_ports() -> StatusPorts:
     return StatusPorts(open_books=_open_books, open_runs=_open_runs)
+
+
+def _render_ports() -> RenderPorts:
+    return RenderPorts(
+        open_books=_open_books,
+        open_records=_open_books,
+        write_docx=write_docx,
+    )
 
 
 def _ingest_request(

@@ -298,6 +298,28 @@ schema failure. chrF back-translation is sampled and advisory: it never blocks.
 Scene brief: FAST, every `scene_brief_every_paragraphs` (paragraph.index % K == 0;
 1-based indexes therefore 4, 8, …), cached on the chapter source so far.
 
+## 19. Frank layout
+
+[`domain/services/layout.py`, `infrastructure/rendering/docx_renderer.py`,
+roadmap 6.1–6.2]
+
+The doubling unit is the **passage**. Incomplete passages (any paragraph not
+`COMPLETE`) are omitted. The marker `— згенеровано до пасажу N —` uses N as the
+1-based index of the last completed passage in full book order (`0` if none).
+
+Adapted sentence: original sense-unit text (black) + ` (` + `natural_uk` (green)
+[+ `: «word_for_word_uk»`] [+ `; lemma – gloss_uk` green italic, and
+`, morph_note_uk` when set] + `)`. Inter-token whitespace stays on the previous
+unit. Sentence-final `.!?…` on the last unit of a sentence is placed **after**
+`)`, so German ``Oliver kommt.`` with natural ``Олівер іде`` becomes
+``Oliver kommt (Олівер іде; Oliver – Олівер).``. Hungarian ``Sándor nevet.``
+with a non-null `word_for_word_uk` inserts `: «…»` inside the green paren.
+
+Ukrainian typography (guillemets, `--` / ` - ` → em dash) applies only to
+translation runs. Source quotes and dashes stay as in the original. Unadapted
+paragraphs are verbatim `raw_text` with no glosses. Word-note lemmas are those
+stored on `WordNote` (analyzer `reunited_lemma` when generation overwrote them).
+
 ---
 
 ## Open questions
@@ -362,6 +384,9 @@ and note it.
 - How often should the FAST scene brief refresh (K paragraphs)? Conservative:
   every 4 paragraphs (`scene_brief_every_paragraphs`); 1-based index, so
   `index % K == 0` fires on 4, 8, …
+- Where does original sentence-final punctuation sit relative to the green paren?
+  Conservative: after `)`, matching the Frank pattern
+  ``Oliver kommt (Олівер іде).``.
 - Termbase slice: case-sensitive lemma match, or casefold? Conservative: casefold
   so `Oliver` / `oliver` still hits. Multiword surface forms match consecutive
   token surfaces or lemmas.
