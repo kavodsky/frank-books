@@ -65,6 +65,16 @@ dialogue_max_chars = 160
 rolling_window_sentences = 3
 scene_brief_sentences = 2
 style_card_digest_lines = 5
+scene_brief_every_paragraphs = 4
+
+[generation]
+fast_retry_attempts = 2
+length_ratio_min = 0.6
+length_ratio_max = 2.0
+ukrainian_marker_min_chars = 20
+backtranslation_sample_rate = 0.10
+backtranslation_chrf_min = 40
+hard_sentence_min_tokens = 24
 
 [termbase]
 entity_min_occurrences = 3

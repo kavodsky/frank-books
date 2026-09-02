@@ -23,6 +23,13 @@ from frank.domain.model.book import (
     Passage,
     Sentence,
 )
+from frank.domain.model.frank import (
+    FrankRecord,
+    ModelTier,
+    QaResult,
+    SenseUnitTranslation,
+    WordNote,
+)
 from frank.domain.model.lemma import LemmaOverride, LemmaSource
 from frank.domain.model.reunion import ReunionSource, VerbParticle
 from frank.domain.model.run import Run, RunStatus
@@ -41,16 +48,20 @@ from frank.infrastructure.persistence.tables import (
     ChapterRow,
     CharacterRow,
     GlossPlanRow,
+    GlossUnitRow,
     LemmaOverrideRow,
     ParagraphRow,
     PassageRow,
+    QaResultRow,
     RunRow,
     SenseUnitRow,
+    SentenceOutputRow,
     SentenceRow,
     StyleCardRow,
     TermRow,
     TokenRow,
     VerbParticleRow,
+    WordNoteRow,
 )
 
 
@@ -397,4 +408,105 @@ def row_from_style_card(item: StyleCard) -> StyleCardRow:
         narration=item.narration,
         tone=item.tone,
         directives=item.directives,
+    )
+
+
+def record_from_parts(
+    output: SentenceOutputRow,
+    units: tuple[GlossUnitRow, ...],
+    notes: tuple[WordNoteRow, ...],
+) -> FrankRecord:
+    return FrankRecord(
+        sentence_id=output.sentence_id,
+        units=tuple(_unit_from_row(row) for row in units),
+        idiomatic_uk=output.idiomatic_uk,
+        word_notes=tuple(_note_from_row(row) for row in notes),
+        tier=ModelTier(output.model_tier),
+    )
+
+
+def output_row_from_record(record: FrankRecord) -> SentenceOutputRow:
+    return SentenceOutputRow(
+        sentence_id=record.sentence_id,
+        idiomatic_uk=record.idiomatic_uk,
+        model_tier=record.tier.value,
+    )
+
+
+def gloss_unit_rows(record: FrankRecord) -> tuple[GlossUnitRow, ...]:
+    return tuple(
+        _unit_row(record.sentence_id, index, item)
+        for index, item in enumerate(record.units, start=1)
+    )
+
+
+def word_note_rows(record: FrankRecord) -> tuple[WordNoteRow, ...]:
+    return tuple(
+        _note_row(record.sentence_id, index, item)
+        for index, item in enumerate(record.word_notes, start=1)
+    )
+
+
+def qa_from_row(row: QaResultRow) -> QaResult:
+    return QaResult(
+        id=row.id,
+        paragraph_id=row.paragraph_id,
+        check_name=row.check_name,
+        passed=row.passed,
+        detail=row.detail_json,
+        attempt=row.attempt,
+    )
+
+
+def row_from_qa(item: QaResult) -> QaResultRow:
+    return QaResultRow(
+        id=item.id,
+        paragraph_id=item.paragraph_id,
+        check_name=item.check_name,
+        passed=item.passed,
+        detail_json=item.detail,
+        attempt=item.attempt,
+    )
+
+
+def _unit_from_row(row: GlossUnitRow) -> SenseUnitTranslation:
+    start, end = (int(part) for part in row.source_span.split(",", maxsplit=1))
+    return SenseUnitTranslation(
+        source_span=(start, end),
+        natural_uk=row.natural_uk,
+        word_for_word_uk=row.word_for_word_uk,
+    )
+
+
+def _unit_row(sentence_id: str, index: int, item: SenseUnitTranslation) -> GlossUnitRow:
+    start, end = item.source_span
+    return GlossUnitRow(
+        id=f"{sentence_id}-u{index}",
+        sentence_id=sentence_id,
+        index=index,
+        source_span=f"{start},{end}",
+        natural_uk=item.natural_uk,
+        word_for_word_uk=item.word_for_word_uk,
+        kind="sense",
+    )
+
+
+def _note_from_row(row: WordNoteRow) -> WordNote:
+    return WordNote(
+        surface=row.surface,
+        lemma=row.lemma,
+        morph_note_uk=row.morph_note_uk,
+        gloss_uk=row.gloss_uk,
+    )
+
+
+def _note_row(sentence_id: str, index: int, item: WordNote) -> WordNoteRow:
+    return WordNoteRow(
+        id=f"{sentence_id}-n{index}",
+        sentence_id=sentence_id,
+        index=index,
+        surface=item.surface,
+        lemma=item.lemma,
+        morph_note_uk=item.morph_note_uk,
+        gloss_uk=item.gloss_uk,
     )

@@ -84,6 +84,38 @@ class StyleCardProposal(BaseModel):
     directives: str
 
 
+class SenseUnitOut(BaseModel):
+    source_span: list[int] = Field(min_length=2, max_length=2)
+    natural_uk: str
+    word_for_word_uk: str | None = None
+
+
+class WordNoteOut(BaseModel):
+    surface: str
+    lemma: str
+    morph_note_uk: str
+    gloss_uk: str
+
+
+class SentenceOut(BaseModel):
+    sentence_id: str
+    units: list[SenseUnitOut]
+    idiomatic_uk: str
+    word_notes: list[WordNoteOut]
+
+
+class ParagraphOut(BaseModel):
+    sentences: list[SentenceOut]
+
+
+class SceneBriefResult(BaseModel):
+    summary_uk: str
+
+
+class BackTranslateResult(BaseModel):
+    text: str
+
+
 def openai_strict_schema(schema: dict[str, object]) -> dict[str, object]:
     """Pydantic fields stay the source; OpenAI requires additionalProperties: false."""
     strict = _strict_node(schema)

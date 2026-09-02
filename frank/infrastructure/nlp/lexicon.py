@@ -113,6 +113,25 @@ def _string_tuple(raw: object, field: str) -> tuple[str, ...]:
     return tuple(found)
 
 
+def load_calques() -> tuple[str, ...]:
+    path = _REPO_DATA / "uk_calques.toml"
+    if not path.is_file():
+        raise UnknownError(f"calque list not found: {path}")
+    payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    phrases = payload.get("phrases", [])
+    if not isinstance(phrases, list):
+        raise UnknownError(f"calque list must be an array: {path}")
+    found: list[str] = []
+    seen: set[str] = set()
+    for item in phrases:
+        folded = str(item).casefold().strip()
+        if not folded or folded in seen:
+            continue
+        seen.add(folded)
+        found.append(folded)
+    return tuple(found)
+
+
 def exonyms_path() -> Path:
     return _REPO_DATA / "uk_exonyms.toml"
 

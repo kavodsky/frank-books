@@ -18,6 +18,7 @@ from frank.domain.model.book import (
     Passage,
     Sentence,
 )
+from frank.domain.model.frank import FrankRecord, ParagraphOutput, QaResult
 from frank.domain.model.lemma import LemmaOverride
 from frank.domain.model.reunion import VerbParticle
 from frank.domain.model.run import Run, RunFailure, RunStatus, RunTally
@@ -28,10 +29,14 @@ from frank.infrastructure.persistence.mappers import (
     chapter_from_row,
     character_from_row,
     gloss_decision_from_row,
+    gloss_unit_rows,
+    output_row_from_record,
     override_from_row,
     paragraph_from_row,
     particle_from_row,
     passage_from_row,
+    qa_from_row,
+    record_from_parts,
     row_from_address_pair,
     row_from_book,
     row_from_chapter,
@@ -41,6 +46,7 @@ from frank.infrastructure.persistence.mappers import (
     row_from_paragraph,
     row_from_particle,
     row_from_passage,
+    row_from_qa,
     row_from_run,
     row_from_sense_unit,
     row_from_sentence,
@@ -53,6 +59,7 @@ from frank.infrastructure.persistence.mappers import (
     style_card_from_row,
     term_from_row,
     token_from_row,
+    word_note_rows,
 )
 from frank.infrastructure.persistence.tables import (
     AddressPairRow,
@@ -60,16 +67,20 @@ from frank.infrastructure.persistence.tables import (
     ChapterRow,
     CharacterRow,
     GlossPlanRow,
+    GlossUnitRow,
     LemmaOverrideRow,
     ParagraphRow,
     PassageRow,
+    QaResultRow,
     RunRow,
     SenseUnitRow,
+    SentenceOutputRow,
     SentenceRow,
     StyleCardRow,
     TermRow,
     TokenRow,
     VerbParticleRow,
+    WordNoteRow,
 )
 
 
@@ -109,6 +120,15 @@ class SqliteRunRepository:
             if row is None:
                 raise DbError(f"run not found: {run_id}")
             return run_from_row(row)
+
+    def list_for_book(self, book_id: str) -> tuple[Run, ...]:
+        with Session(self._engine) as session:
+            rows = session.scalars(
+                select(RunRow)
+                .where(RunRow.book_id == book_id)
+                .order_by(RunRow.started_at)
+            ).all()
+            return tuple(run_from_row(row) for row in rows)
 
     def _finish(
         self,
@@ -414,6 +434,48 @@ class SqliteBookRepository:
                 return None
             return style_card_from_row(row)
 
+    def save_paragraph_output(self, slug: str, output: ParagraphOutput) -> None:
+        with Session(self._engine) as session:
+            _book_id(session, slug)
+            sentence_ids = tuple(item.sentence_id for item in output.records)
+            _delete_generation(session, sentence_ids, output.paragraph_id)
+            for record in output.records:
+                session.add(output_row_from_record(record))
+                session.add_all(gloss_unit_rows(record))
+                session.add_all(word_note_rows(record))
+            session.add_all([row_from_qa(item) for item in output.qa])
+            session.execute(
+                update(ParagraphRow)
+                .where(ParagraphRow.id == output.paragraph_id)
+                .values(status=output.status.value)
+            )
+            session.commit()
+
+    def get_records(self, slug: str) -> tuple[FrankRecord, ...]:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            outputs = session.scalars(
+                select(SentenceOutputRow)
+                .join(SentenceRow, SentenceOutputRow.sentence_id == SentenceRow.id)
+                .join(ParagraphRow, SentenceRow.paragraph_id == ParagraphRow.id)
+                .join(ChapterRow, ParagraphRow.chapter_id == ChapterRow.id)
+                .where(ChapterRow.book_id == book_id)
+                .order_by(ChapterRow.index, ParagraphRow.index, SentenceRow.index)
+            ).all()
+            return tuple(_record(session, row) for row in outputs)
+
+    def get_qa(self, slug: str) -> tuple[QaResult, ...]:
+        with Session(self._engine) as session:
+            book_id = _book_id(session, slug)
+            rows = session.scalars(
+                select(QaResultRow)
+                .join(ParagraphRow, QaResultRow.paragraph_id == ParagraphRow.id)
+                .join(ChapterRow, ParagraphRow.chapter_id == ChapterRow.id)
+                .where(ChapterRow.book_id == book_id)
+                .order_by(QaResultRow.paragraph_id, QaResultRow.check_name)
+            ).all()
+            return tuple(qa_from_row(row) for row in rows)
+
 
 def _set_passage_ids(session: Session, structure: BookStructure) -> None:
     for paragraph in structure.paragraphs:
@@ -463,11 +525,15 @@ def _delete_sentences(session: Session, book_id: str) -> None:
     ).all()
     if not paragraph_ids:
         return
+    session.execute(
+        delete(QaResultRow).where(QaResultRow.paragraph_id.in_(paragraph_ids))
+    )
     sentence_ids = session.scalars(
         select(SentenceRow.id).where(SentenceRow.paragraph_id.in_(paragraph_ids))
     ).all()
     if not sentence_ids:
         return
+    _delete_generation(session, tuple(sentence_ids), None)
     token_ids = session.scalars(
         select(TokenRow.id).where(TokenRow.sentence_id.in_(sentence_ids))
     ).all()
@@ -483,3 +549,41 @@ def _delete_sentences(session: Session, book_id: str) -> None:
     )
     session.execute(delete(TokenRow).where(TokenRow.sentence_id.in_(sentence_ids)))
     session.execute(delete(SentenceRow).where(SentenceRow.id.in_(sentence_ids)))
+
+
+def _delete_generation(
+    session: Session, sentence_ids: tuple[str, ...], paragraph_id: str | None
+) -> None:
+    if paragraph_id is not None:
+        session.execute(
+            delete(QaResultRow).where(QaResultRow.paragraph_id == paragraph_id)
+        )
+    if not sentence_ids:
+        return
+    session.execute(
+        delete(WordNoteRow).where(WordNoteRow.sentence_id.in_(sentence_ids))
+    )
+    session.execute(
+        delete(GlossUnitRow).where(GlossUnitRow.sentence_id.in_(sentence_ids))
+    )
+    session.execute(
+        delete(SentenceOutputRow).where(SentenceOutputRow.sentence_id.in_(sentence_ids))
+    )
+
+
+def _record(session: Session, output: SentenceOutputRow) -> FrankRecord:
+    units = tuple(
+        session.scalars(
+            select(GlossUnitRow)
+            .where(GlossUnitRow.sentence_id == output.sentence_id)
+            .order_by(GlossUnitRow.index)
+        ).all()
+    )
+    notes = tuple(
+        session.scalars(
+            select(WordNoteRow)
+            .where(WordNoteRow.sentence_id == output.sentence_id)
+            .order_by(WordNoteRow.index)
+        ).all()
+    )
+    return record_from_parts(output, units, notes)

@@ -1,0 +1,10 @@
+# Calques that pass the Russian-letter check but are still Russian interference.
+# Validation treats a hit as blocking (roadmap 5.2, linguistics §12).
+phrases = [
+  "получити",
+  "рахувати",
+  "приймати участь",
+  "співпадати",
+  "на протязі",
+  "відноситися до",
+]

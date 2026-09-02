@@ -1,0 +1,9 @@
+{{ context }}
+
+Paragraph JSON (sense units and planned glosses are given; do not re-analyze):
+{{ payload_json }}
+{% if correction %}
+
+Previous output failed validation. Fix only what the checks name:
+{{ correction }}
+{% endif %}

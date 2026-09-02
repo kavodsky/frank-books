@@ -175,6 +175,16 @@ class StyleCardRow(Base):
     directives: Mapped[str] = mapped_column(Text)
 
 
+class SentenceOutputRow(Base):
+    __tablename__ = "sentence_output"
+
+    sentence_id: Mapped[str] = mapped_column(
+        String, ForeignKey("sentence.id"), primary_key=True
+    )
+    idiomatic_uk: Mapped[str] = mapped_column(Text)
+    model_tier: Mapped[str]
+
+
 class GlossUnitRow(Base):
     __tablename__ = "gloss_unit"
 

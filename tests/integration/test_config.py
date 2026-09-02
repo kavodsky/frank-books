@@ -38,6 +38,14 @@ def test_example_config_loads(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.context.rolling_window_sentences == 3
     assert settings.context.scene_brief_sentences == 2
     assert settings.context.style_card_digest_lines == 5
+    assert settings.context.scene_brief_every_paragraphs == 4
+    assert settings.generation.fast_retry_attempts == 2
+    assert settings.generation.length_ratio_min == 0.6
+    assert settings.generation.length_ratio_max == 2.0
+    assert settings.generation.ukrainian_marker_min_chars == 20
+    assert settings.generation.backtranslation_sample_rate == 0.10
+    assert settings.generation.backtranslation_chrf_min == 40
+    assert settings.generation.hard_sentence_min_tokens == 24
     assert settings.termbase.entity_min_occurrences == 3
     assert settings.termbase.unknown_lemma_min_count == 5
     assert settings.termbase.merge_max_edit_distance == 2

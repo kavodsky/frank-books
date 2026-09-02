@@ -39,6 +39,11 @@ from frank.application.build_termbase import (
     render_translate_report,
     translate_termbase,
 )
+from frank.application.generate_passages import (
+    StatusPorts,
+    book_generation_status,
+    render_status,
+)
 from frank.application.ingest_book import (
     IngestPorts,
     IngestRequest,
@@ -90,7 +95,10 @@ from frank.infrastructure.nlp.term_translator import (
     TranslateConfig,
 )
 from frank.infrastructure.persistence.cache import StepCache
-from frank.infrastructure.persistence.repositories import SqliteBookRepository
+from frank.infrastructure.persistence.repositories import (
+    SqliteBookRepository,
+    SqliteRunRepository,
+)
 from frank.infrastructure.persistence.tables import create_book_db
 from frank.infrastructure.sources.fetch import LocalFileFetcher
 from frank.infrastructure.sources.raw_store import FilesystemRawStore
@@ -248,6 +256,14 @@ def approve(
     """Import a reviewed TOML and set term.approved=true."""
     report = approve_review(_review_ports(), slug, sys.stdin.read())
     typer.echo(render_approve_report(report))
+
+
+@app.command()
+def status(
+    slug: Annotated[str, typer.Argument(help="Book slug under books/")],
+) -> None:
+    """Passages done / total and passages-per-hour."""
+    typer.echo(render_status(book_generation_status(_status_ports(), slug)), nl=False)
 
 
 def _ports(settings: Settings) -> IngestPorts:
@@ -475,6 +491,14 @@ def _lemma_arbiter(settings: Settings, slug: str, lang: str) -> SmartLemmaArbite
 
 def _open_books(slug: str) -> SqliteBookRepository:
     return SqliteBookRepository(create_book_db(_BOOKS_DIR / slug / "book.db"))
+
+
+def _open_runs(slug: str) -> SqliteRunRepository:
+    return SqliteRunRepository(create_book_db(_BOOKS_DIR / slug / "book.db"))
+
+
+def _status_ports() -> StatusPorts:
+    return StatusPorts(open_books=_open_books, open_runs=_open_runs)
 
 
 def _ingest_request(

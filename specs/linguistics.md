@@ -275,6 +275,29 @@ German: ``— Willst du mit mir gehen, Oliver?`` injects Oliver's term and, when
 Bumble is also named, `Bumble → Oliver: T (ти)`. Hungarian: lemma ``Sándor``
 injects `MUST translate Sándor as Шандор`.
 
+## 18. Generation and validation
+
+[`domain/services/validation.py`, `domain/services/hard_sentences.py`,
+roadmap 5.1–5.4]
+
+One FAST call per paragraph returns an array of FrankRecords. The model explains
+given morphology; it does not invent lemmas or sense-unit spans. Word-note lemmas
+are overwritten from the token (`reunited_lemma` when set).
+
+Deterministic predicates then run: schema, sense-unit coverage, gloss coverage,
+termbase substring (German ``Oliver`` → ``Олівер``; Hungarian ``Sándor`` →
+``Шандор``), Ukrainian letters/markers/calques (§12), length ratio, T/V. T/V in
+dialogue rejects the wrong pronoun (``Ви`` on a T pair, ``ти`` on a V pair) and
+does not require the correct pronoun to be present. MIXED pairs are not locked.
+
+FAST retries append the failed check names as a correction (`fast_retry_attempts`
+after the first call). Remaining failures, plus hard sentences (irrealis Mood,
+long hypotaxis, IDIOM term hits), go to SMART. A missing sentence record is a
+schema failure. chrF back-translation is sampled and advisory: it never blocks.
+
+Scene brief: FAST, every `scene_brief_every_paragraphs` (paragraph.index % K == 0;
+1-based indexes therefore 4, 8, …), cached on the chapter source so far.
+
 ---
 
 ## Open questions
@@ -337,7 +360,8 @@ and note it.
   `style_card.md` (heading + blank + three bullets, dropping directives)?
   Conservative: literal first `style_card_digest_lines` lines.
 - How often should the FAST scene brief refresh (K paragraphs)? Conservative:
-  every 4 paragraphs; the knob waits for Phase 5, which produces the brief.
+  every 4 paragraphs (`scene_brief_every_paragraphs`); 1-based index, so
+  `index % K == 0` fires on 4, 8, …
 - Termbase slice: case-sensitive lemma match, or casefold? Conservative: casefold
   so `Oliver` / `oliver` still hits. Multiword surface forms match consecutive
   token surfaces or lemmas.

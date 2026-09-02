@@ -14,6 +14,7 @@ class BookStatus(StrEnum):
 
 class ParagraphStatus(StrEnum):
     RAW = "raw"
+    COMPLETE = "complete"
 
 
 class Book(BaseModel):

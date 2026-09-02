@@ -81,6 +81,17 @@ class ContextSettings(BaseModel):
     rolling_window_sentences: int = Field(ge=1)
     scene_brief_sentences: int = Field(ge=1)
     style_card_digest_lines: int = Field(ge=1)
+    scene_brief_every_paragraphs: int = Field(ge=1)
+
+
+class GenerationSettings(BaseModel):
+    fast_retry_attempts: int = Field(ge=0)
+    length_ratio_min: float = Field(gt=0)
+    length_ratio_max: float = Field(gt=0)
+    ukrainian_marker_min_chars: int = Field(ge=1)
+    backtranslation_sample_rate: float = Field(ge=0, le=1)
+    backtranslation_chrf_min: float = Field(ge=0)
+    hard_sentence_min_tokens: int = Field(ge=1)
 
 
 class TermbaseSettings(BaseModel):
@@ -114,6 +125,7 @@ class Settings(BaseSettings):
     gloss: GlossSettings
     passage: PassageSettings
     context: ContextSettings
+    generation: GenerationSettings
     termbase: TermbaseSettings
 
 

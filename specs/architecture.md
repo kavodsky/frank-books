@@ -186,9 +186,13 @@ Tests mirror the layers, so a failing path tells you which layer broke:
       test_chapter_briefs.py
       test_style_card.py
       test_termbase_review.py
+      test_validation.py
+      test_hard_sentences.py
+      test_generate_passages.py
     integration/     # infrastructure against real SQLite / a mocked LLM server
       test_repositories.py
       test_llm_generator.py
+      test_generation_session.py
       test_ingest.py
       test_termbase.py
       test_term_translate.py
