@@ -77,6 +77,12 @@ class PassageSettings(BaseModel):
     dialogue_max_chars: int = Field(ge=1)
 
 
+class ContextSettings(BaseModel):
+    rolling_window_sentences: int = Field(ge=1)
+    scene_brief_sentences: int = Field(ge=1)
+    style_card_digest_lines: int = Field(ge=1)
+
+
 class TermbaseSettings(BaseModel):
     entity_min_occurrences: int = Field(ge=1)
     unknown_lemma_min_count: int = Field(ge=1)
@@ -107,6 +113,7 @@ class Settings(BaseSettings):
     nlp: NlpSettings
     gloss: GlossSettings
     passage: PassageSettings
+    context: ContextSettings
     termbase: TermbaseSettings
 
 

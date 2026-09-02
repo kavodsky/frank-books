@@ -61,6 +61,11 @@ min_chars = 800
 max_chars = 1500
 dialogue_max_chars = 160
 
+[context]
+rolling_window_sentences = 3
+scene_brief_sentences = 2
+style_card_digest_lines = 5
+
 [termbase]
 entity_min_occurrences = 3
 unknown_lemma_min_count = 5

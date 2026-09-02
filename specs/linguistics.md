@@ -251,6 +251,30 @@ archaic flavour (section 10).
 term or any Character with `gender=unknown` blocks Phase 5. `--yolo` skips that
 check in the generation asset, not in the review domain.
 
+## 17. PromptContext assembly
+
+[`domain/services/context_assembly.py`, roadmap Phase 4, ADR 0018]
+
+One pure function builds the generation prompt for a paragraph. No LLM, no I/O.
+Priority (keep from the top; truncate from the bottom; omit empty sections):
+
+1. Task instruction (`prompts/generate_paragraph.j2`, already rendered).
+2. Termbase slice: terms whose lemma or surface form matches this paragraph's
+   token lemmas/surfaces (casefold; reunited lemma counts; multiword surfaces are
+   consecutive tokens). Each hit is `MUST translate {lemma} as {translation_uk}`.
+3. Speaker context, only for speech-opener paragraphs: mentioned characters
+   (name, Ukrainian rendering, gender) and T/V pairs among them
+   (`T (ти)` / `V (Ви)` / MIXED scene directive).
+4. Rolling window: previous `rolling_window_sentences` of the same chapter,
+   original plus idiomatic Ukrainian. Empty at a chapter start.
+5. Local scene brief, clamped to `scene_brief_sentences`.
+6. Chapter summary from 3.5.
+7. Style-card digest: first `style_card_digest_lines` lines of `style_card.md`.
+
+German: ``— Willst du mit mir gehen, Oliver?`` injects Oliver's term and, when
+Bumble is also named, `Bumble → Oliver: T (ти)`. Hungarian: lemma ``Sándor``
+injects `MUST translate Sándor as Шандор`.
+
 ---
 
 ## Open questions
@@ -307,3 +331,13 @@ and note it.
   stays the editable file; the TOML is terms + characters + address matrix.
 - Review import: merge by id, or replace the three collections from the file?
   Conservative: replace. Rows omitted from the TOML are dropped.
+- Phase 4 token budget: model tokenizer, or a domain-pure estimate? Conservative:
+  whitespace words (`str.split()`, ADR 0018).
+- Style-card digest: first 5 *non-empty* lines, or literal first 5 lines of
+  `style_card.md` (heading + blank + three bullets, dropping directives)?
+  Conservative: literal first `style_card_digest_lines` lines.
+- How often should the FAST scene brief refresh (K paragraphs)? Conservative:
+  every 4 paragraphs; the knob waits for Phase 5, which produces the brief.
+- Termbase slice: case-sensitive lemma match, or casefold? Conservative: casefold
+  so `Oliver` / `oliver` still hits. Multiword surface forms match consecutive
+  token surfaces or lemmas.

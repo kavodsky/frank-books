@@ -43,7 +43,7 @@ def collect_address_observations(
     found: list[AddressObservation] = []
     for sentence in request.sentences:
         paragraph = paragraphs.get(sentence.paragraph_id)
-        if paragraph is None or not _is_dialogue(paragraph):
+        if paragraph is None or not is_dialogue_paragraph(paragraph):
             continue
         tokens = tokens_by_sentence.get(sentence.id, ())
         form = _tv_form(tokens, request.cues)
@@ -165,9 +165,28 @@ def _norm(text: str) -> str:
     return " ".join("".join(chars).split())
 
 
-def _is_dialogue(paragraph: Paragraph) -> bool:
+def is_dialogue_paragraph(paragraph: Paragraph) -> bool:
+    """True when the paragraph starts with a speech opener (— « " …)."""
     text = paragraph.raw_text.strip()
     return bool(text) and text.startswith(_SPEECH_OPENERS)
+
+
+def characters_in_tokens(
+    tokens: tuple[Token, ...], characters: tuple[Character, ...]
+) -> tuple[Character, ...]:
+    """Characters whose name or alias spans the tokens, first mention first."""
+    if not characters:
+        return ()
+    names = _name_index(characters)
+    order: list[str] = []
+    seen: set[str] = set()
+    for _, char_id in _mentions(tokens, names):
+        if char_id in seen:
+            continue
+        seen.add(char_id)
+        order.append(char_id)
+    by_id = {item.id: item for item in characters}
+    return tuple(by_id[char_id] for char_id in order if char_id in by_id)
 
 
 def _group_tokens(tokens: tuple[Token, ...]) -> dict[str, tuple[Token, ...]]:
