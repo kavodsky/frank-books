@@ -11,6 +11,7 @@ class ErrorClass(StrEnum):
     SCHEMA_INVALID = "schema_invalid"
     VALIDATION_EXHAUSTED = "validation_exhausted"
     DB_ERROR = "db_error"
+    TERMBASE_NOT_APPROVED = "termbase_not_approved"
     UNKNOWN = "unknown"
 
 
@@ -48,6 +49,11 @@ class ValidationExhausted(FrankError):
 class DbError(FrankError):
     def __init__(self, message: str) -> None:
         super().__init__(message, ErrorClass.DB_ERROR)
+
+
+class TermbaseNotApproved(FrankError):
+    def __init__(self, message: str) -> None:
+        super().__init__(message, ErrorClass.TERMBASE_NOT_APPROVED)
 
 
 class UnknownError(FrankError):

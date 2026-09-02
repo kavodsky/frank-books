@@ -241,6 +241,16 @@ title/author into a StyleCard (epoch, setting, register, narration, tone,
 directives). Directives keep glosses in modern Ukrainian even when doubling has
 archaic flavour (section 10).
 
+## 16. Human review gate
+
+[`domain/services/termbase_review.py`, roadmap 3.6]
+
+`frank review-terms` dumps terms, characters, and address pairs as one TOML.
+`frank approve` replaces those three collections from the file and sets
+`term.approved=true`. Generation calls `require_approved_termbase`: any unapproved
+term or any Character with `gender=unknown` blocks Phase 5. `--yolo` skips that
+check in the generation asset, not in the review domain.
+
 ---
 
 ## Open questions
@@ -293,3 +303,7 @@ and note it.
   sentences plus names in that span, never the middle (ADR 0017).
 - StyleCard from source excerpts, or from chapter summaries? Conservative: reduce
   over title/author and the Ukrainian summaries only.
+- Does the 3.6 review TOML include the StyleCard? Conservative: no — `style_card.md`
+  stays the editable file; the TOML is terms + characters + address matrix.
+- Review import: merge by id, or replace the three collections from the file?
+  Conservative: replace. Rows omitted from the TOML are dropped.

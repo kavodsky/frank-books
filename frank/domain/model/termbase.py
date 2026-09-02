@@ -211,3 +211,49 @@ class StyleReduceInput(BaseModel):
     author: str
     lang: str
     summaries: tuple[ChapterSummary, ...]
+
+
+class ReviewTerm(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    kind: TermKind
+    lemma: str
+    translation_uk: str
+    note: str = ""
+    surface_forms: tuple[str, ...] = ()
+
+
+class ReviewCharacter(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    canonical_name: str
+    translation_uk: str
+    gender: Gender
+    aliases: tuple[str, ...] = ()
+    role_note: str = ""
+
+
+class ReviewAddressPair(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    speaker_id: str
+    addressee_id: str
+    tv_form: TvForm
+
+
+class ReviewDocument(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    terms: tuple[ReviewTerm, ...] = ()
+    characters: tuple[ReviewCharacter, ...] = ()
+    address_pairs: tuple[ReviewAddressPair, ...] = ()
+
+
+class TermbaseSnapshot(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    terms: tuple[Term, ...] = ()
+    characters: tuple[Character, ...] = ()
+    address_pairs: tuple[AddressPair, ...] = ()

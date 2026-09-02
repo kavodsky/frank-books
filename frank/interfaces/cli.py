@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -44,6 +45,12 @@ from frank.application.ingest_book import (
     ingest_book,
     inspect_slug,
     render_inspect_report,
+)
+from frank.application.review_termbase import (
+    ReviewPorts,
+    approve_review,
+    export_review,
+    render_approve_report,
 )
 from frank.config import Settings, load_settings
 from frank.domain.model.annotation import GlossPlanConfig, SegmentationConfig
@@ -224,6 +231,23 @@ def terms(
         + render_address_report(addresses)
         + render_style_report(style)
     )
+
+
+@app.command("review-terms")
+def review_terms_cmd(
+    slug: Annotated[str, typer.Argument(help="Book slug under books/")],
+) -> None:
+    """Export termbase, characters, and the T/V matrix as editable TOML."""
+    typer.echo(export_review(_review_ports(), slug), nl=False)
+
+
+@app.command()
+def approve(
+    slug: Annotated[str, typer.Argument(help="Book slug under books/")],
+) -> None:
+    """Import a reviewed TOML and set term.approved=true."""
+    report = approve_review(_review_ports(), slug, sys.stdin.read())
+    typer.echo(render_approve_report(report))
 
 
 def _ports(settings: Settings) -> IngestPorts:
@@ -428,6 +452,10 @@ def _style_builder(settings: Settings, slug: str) -> SmartStyleBuilder:
 
 def _write_style_markdown(slug: str, markdown: str) -> None:
     (_BOOKS_DIR / slug / "style_card.md").write_text(markdown, encoding="utf-8")
+
+
+def _review_ports() -> ReviewPorts:
+    return ReviewPorts(open_books=_open_books, open_terms=_open_books)
 
 
 def _lemma_arbiter(settings: Settings, slug: str, lang: str) -> SmartLemmaArbiter:

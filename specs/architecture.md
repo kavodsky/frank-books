@@ -107,6 +107,8 @@ frank-books/
         address_merge.py
         chapter_briefs.py
         style_card.py
+        termbase_review.py
+        termbase_review_toml.py
         reunification.py   # separable verb / igekötő pairing rules
         context_assembly.py# budgeted assembly (Phase 4) — pure function
         validation.py      # all Phase 5.2 predicates, pure
@@ -183,6 +185,7 @@ Tests mirror the layers, so a failing path tells you which layer broke:
       test_address_merge.py
       test_chapter_briefs.py
       test_style_card.py
+      test_termbase_review.py
     integration/     # infrastructure against real SQLite / a mocked LLM server
       test_repositories.py
       test_llm_generator.py
@@ -192,6 +195,7 @@ Tests mirror the layers, so a failing path tells you which layer broke:
       test_character_map.py
       test_address_matrix.py
       test_style.py
+      test_review_round_trip.py
     e2e/             # one fixture chapter through the whole pipeline
       test_fixture_chapter.py
     architecture/

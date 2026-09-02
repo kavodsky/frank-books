@@ -35,7 +35,7 @@ uv run frank inspect pecsenye                    # sanity report; fix book.toml 
 uv run frank annotate pecsenye                   # sentences, tokens, lemmas, particles
 uv run frank terms pecsenye                      # terms, characters, T/V, summaries, style card
 # morphology + analysis: later roadmap steps, then Dagster for generation
-uv run frank review-terms pecsenye > terms.toml   # export termbase + characters
+uv run frank review-terms pecsenye > terms.toml   # export termbase + characters + T/V
 $EDITOR terms.toml                              # ~15 min: check names, genders, T/V
 uv run frank approve pecsenye < terms.toml
 # generate: materialize the generation asset in Dagster with a session budget

@@ -9,6 +9,7 @@ from frank.domain.errors import (
     ModelTimeout,
     ModelUnreachable,
     SchemaInvalid,
+    TermbaseNotApproved,
 )
 
 
@@ -17,3 +18,4 @@ def test_subclasses_pin_error_class() -> None:
     assert ModelUnreachable("x").error_class is ErrorClass.MODEL_UNREACHABLE
     assert ModelTimeout("x").error_class is ErrorClass.TIMEOUT
     assert SchemaInvalid("x").error_class is ErrorClass.SCHEMA_INVALID
+    assert TermbaseNotApproved("x").error_class is ErrorClass.TERMBASE_NOT_APPROVED

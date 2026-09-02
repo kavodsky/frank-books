@@ -92,7 +92,7 @@ Steps:
      `run(id, book_id, started_at, ended_at, status, passages_done,
      last_passage_id, error_class, error_msg)`. `error_class ∈
      {model_unreachable, timeout, schema_invalid, validation_exhausted,
-     db_error, unknown}` — classify at raise time, never grep logs later.
+     db_error, termbase_not_approved, unknown}` — classify at raise time, never grep logs later.
   2. **Live progress**: `rich` progress bar over passages with current
      chapter/passage, elapsed, passages/hour.
   3. **Completion notice** (macOS): `osascript -e 'display notification …'` on
