@@ -1,4 +1,4 @@
-"""Named Phase 5.2 predicates. No LLM; each check is a Dagster asset-check later.
+"""Named predicates for generation and Dagster asset checks. No LLM.
 
 German: ``Oliver`` in the source with termbase ``Олівер`` fails unless ``Олівер``
 appears in ``idiomatic_uk`` / unit renderings. Hungarian: ``Sándor`` / ``Шандор``.
@@ -126,6 +126,25 @@ def tv_matches(record: FrankRecord, form: TvForm | None) -> CheckResult:
 
 def failed_checks(results: tuple[CheckResult, ...]) -> tuple[CheckResult, ...]:
     return tuple(item for item in results if not item.passed)
+
+
+def named_check(
+    record: FrankRecord, spec: SentenceCheckSpec, name: CheckName
+) -> CheckResult:
+    """Pick one 5.2 predicate out of ``validate_record`` for an asset check."""
+    return next(item for item in validate_record(record, spec) if item.name is name)
+
+
+def lemmas_present(tokens: tuple[Token, ...]) -> CheckResult:
+    """Every token has a non-empty lemma (roadmap 7.2).
+
+    German ``kam`` must carry lemma ``kommen``; Hungarian ``elindult`` must
+    carry ``elindul``. Empty lemmas fail the segmentation asset check.
+    """
+    missing = tuple(item.surface for item in tokens if not item.lemma.strip())
+    if missing:
+        return _fail(CheckName.LEMMAS, "empty lemma: " + ", ".join(missing[:8]))
+    return _ok(CheckName.LEMMAS)
 
 
 def _ok(name: CheckName) -> CheckResult:

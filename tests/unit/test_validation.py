@@ -16,7 +16,11 @@ from frank.domain.model.frank import (
     WordNote,
 )
 from frank.domain.model.termbase import Term, TermKind, TvForm
-from frank.domain.services.validation import failed_checks, validate_record
+from frank.domain.services.validation import (
+    failed_checks,
+    lemmas_present,
+    validate_record,
+)
 
 _CFG = ValidationConfig(
     length_ratio_min=0.6,
@@ -190,3 +194,13 @@ def test_empty_natural_uk_fails_coverage() -> None:
     record = _record(natural="  ")
     names = {item.name for item in failed_checks(validate_record(record, _spec()))}
     assert CheckName.SENSE_UNIT_COVERAGE in names
+
+
+@pytest.mark.unit
+def test_lemmas_present_rejects_empty_lemma() -> None:
+    good = _token((1, "kam", "kommen", "VERB"))
+    assert lemmas_present((good,)).passed
+    empty = good.model_copy(update={"lemma": "  "})
+    result = lemmas_present((empty,))
+    assert not result.passed
+    assert result.name is CheckName.LEMMAS

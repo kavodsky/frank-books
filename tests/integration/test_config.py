@@ -18,6 +18,8 @@ def test_example_config_loads(monkeypatch: pytest.MonkeyPatch) -> None:
     settings = load_settings(REPO / "config.example.toml")
     assert settings.languages.target == "uk"
     assert settings.concurrency.generation == 1
+    assert settings.budgets.asset_max_retries == 2
+    assert settings.budgets.asset_retry_delay_seconds == 1.0
     assert settings.backend in {"mlx", "ollama"}
     assert settings.fast.base_url.startswith("http://127.0.0.1")
     assert settings.nlp.german_model == "de_core_news_lg"

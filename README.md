@@ -38,9 +38,10 @@ uv run frank terms pecsenye                      # terms, characters, T/V, summa
 uv run frank review-terms pecsenye > terms.toml   # export termbase + characters + T/V
 $EDITOR terms.toml                              # ~15 min: check names, genders, T/V
 uv run frank approve pecsenye < terms.toml
-# generate: materialize the generation asset in Dagster with a session budget
+# generate: in Dagster, materialize `generate` with a session budget (no CLI runner)
 uv run frank render pecsenye                      # partial or complete .docx
-uv run frank status pecsenye                      # passages done, pace
+uv run frank status pecsenye                      # passages done, pace, ETA
+uv run frank report pecsenye                      # cumulative FAST/SMART, needs_human
 ```
 
 Generation is started only from Dagster (`dagster dev`) — there is deliberately no

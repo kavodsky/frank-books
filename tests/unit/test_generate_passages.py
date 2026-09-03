@@ -16,6 +16,7 @@ from frank.application.generate_paragraph import (
 from frank.application.generate_passages import (
     StatusPorts,
     book_generation_status,
+    generate_chapter,
     generate_passages,
     render_status,
 )
@@ -587,6 +588,97 @@ def test_status_reports_pace_after_a_completed_run() -> None:
     assert report.passages_done == 3
     assert report.passages_total == 4
     assert report.passages_per_hour == 3.0
+    assert report.eta_hours == pytest.approx(1 / 3)
     text = render_status(report)
     assert "3/4" in text
     assert "3.0" in text
+    assert "0.3 h" in text
+
+
+@pytest.mark.unit
+def test_generate_chapter_only_fills_that_chapter() -> None:
+    store = _two_chapters()
+    generator = CountingGenerator()
+    report = generate_chapter(
+        _ports(store, generator, MemoryCache(), FakeRuns()),
+        _SLUG,
+        _config(store),
+        1,
+    )
+    assert generator.calls == 2
+    done = {
+        item.id
+        for item in store.structure.paragraphs
+        if item.status is ParagraphStatus.COMPLETE
+    }
+    assert done == {"p1", "p2"}
+    leftover = {
+        item.id
+        for item in store.structure.paragraphs
+        if item.status is ParagraphStatus.RAW
+    }
+    assert leftover == {"c2-p1", "c2-p2"}
+    assert report.session_passages == 2
+
+
+def _two_chapters() -> FakeStore:
+    first = _store(2, _term())
+    extra_passages = []
+    extra_paras = []
+    extra_sentences = []
+    extra_tokens = []
+    extra_units = []
+    extra_plan = []
+    chapter = Chapter(id="c2", book_id="b", index=2, title="II", summary_uk="")
+    for index in (1, 2):
+        passage = Passage(id=f"c2-pass-{index}", chapter_id="c2", index=index)
+        extra_passages.append(passage)
+        paragraph = Paragraph(
+            id=f"c2-p{index}",
+            chapter_id="c2",
+            passage_id=passage.id,
+            index=index,
+            raw_text="Oliver kommt.",
+            hash=f"h2{index}",
+            status=ParagraphStatus.RAW,
+        )
+        extra_paras.append(paragraph)
+        sid = f"c2-s{index}"
+        extra_sentences.append(
+            Sentence(id=sid, paragraph_id=paragraph.id, index=1, text="Oliver kommt.")
+        )
+        token = Token(
+            id=f"{sid}-t1",
+            sentence_id=sid,
+            index=1,
+            surface="Oliver",
+            lemma="Oliver",
+            upos="PROPN",
+            morph=Morphology(),
+        )
+        extra_tokens.append(token)
+        extra_units.append(
+            SenseUnit(
+                id=f"{sid}-u1", sentence_id=sid, index=1, start_index=1, end_index=3
+            )
+        )
+        extra_plan.append(
+            GlossDecision(
+                token_id=token.id, gloss=True, reason=GlossReason.FIRST_OCCURRENCE
+            )
+        )
+    structure = first.structure.model_copy(
+        update={
+            "chapters": first.structure.chapters + (chapter,),
+            "paragraphs": first.structure.paragraphs + tuple(extra_paras),
+            "passages": first.structure.passages + tuple(extra_passages),
+        }
+    )
+    return FakeStore(
+        structure=structure,
+        sentences=first.sentences + tuple(extra_sentences),
+        tokens=first.tokens + tuple(extra_tokens),
+        units=first.units + tuple(extra_units),
+        plan=first.plan + tuple(extra_plan),
+        terms=first.terms,
+    )

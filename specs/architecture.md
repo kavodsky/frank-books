@@ -129,6 +129,10 @@ frank-books/
       build_address.py
       build_style.py
       generate_passages.py     # takes a budget, loops passages, calls validation
+      generate_paragraph.py
+      analyze_book.py          # termbase through style card (Phase 3 reduce)
+      check_generation.py      # stored-record predicates for asset checks
+      report_book.py           # cumulative session picture
       render_book.py
       review_termbase.py
 
@@ -164,6 +168,7 @@ frank-books/
 
     interfaces/        # entry points. Thin. No logic
       cli.py           # Typer: ingest, inspect, annotate, terms, review-terms, approve, render, status, report, bench
+      wiring.py        # composition root shared by CLI and Dagster
       dagster_defs.py  # assets, asset checks, resources, RetryPolicy — calls application use cases
 
     config.py        # pydantic-settings
@@ -192,11 +197,13 @@ Tests mirror the layers, so a failing path tells you which layer broke:
       test_validation.py
       test_hard_sentences.py
       test_generate_passages.py
+      test_report_book.py
       test_layout.py
     integration/     # infrastructure against real SQLite / a mocked LLM server
       test_repositories.py
       test_llm_generator.py
       test_generation_session.py
+      test_dagster_health.py
       test_docx_render.py
       test_ingest.py
       test_termbase.py

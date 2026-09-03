@@ -32,6 +32,8 @@ class Budgets(BaseModel):
     llm_retry_max_seconds: float
     session_max_minutes: int
     session_max_passages: int
+    asset_max_retries: int
+    asset_retry_delay_seconds: float
 
 
 class Concurrency(BaseModel):

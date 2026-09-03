@@ -24,6 +24,8 @@ class CheckName(StrEnum):
     UKRAINIAN = "ukrainian_language"
     LENGTH_RATIO = "length_ratio"
     TV = "tv_compliance"
+    LEMMAS = "lemmas_present"
+    BACK_TRANSLATION = "back_translation"
 
 
 class SenseUnitTranslation(BaseModel):

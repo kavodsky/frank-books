@@ -23,6 +23,7 @@ from frank.application.generate_paragraph import (
 )
 from frank.domain.errors import FrankError
 from frank.domain.model.book import BookStructure, ParagraphStatus, Passage
+from frank.domain.model.frank import ModelTier
 from frank.domain.model.run import Run, RunFailure, RunTally
 from frank.domain.model.termbase import TermbaseSnapshot
 from frank.domain.ports.repositories import (
@@ -40,6 +41,7 @@ __all__ = [
     "StatusPorts",
     "StatusReport",
     "book_generation_status",
+    "generate_chapter",
     "generate_passages",
     "render_generation_report",
     "render_status",
@@ -59,6 +61,9 @@ class GenerationReport(BaseModel):
     passages_done: int
     passages_total: int
     needs_human: int
+    session_passages: int
+    fast_count: int
+    smart_count: int
 
 
 class StatusReport(BaseModel):
@@ -68,12 +73,29 @@ class StatusReport(BaseModel):
     passages_done: int
     passages_total: int
     passages_per_hour: float | None
+    eta_hours: float | None
 
 
 def generate_passages(
     ports: GeneratePorts, slug: str, config: GenerateConfig
 ) -> GenerationReport:
     """Generate unfinished passages in book order until the session budget."""
+    return _generate(ports, slug, config, None)
+
+
+def generate_chapter(
+    ports: GeneratePorts, slug: str, config: GenerateConfig, chapter_index: int
+) -> GenerationReport:
+    """Generate unfinished passages of one chapter until the session budget."""
+    return _generate(ports, slug, config, chapter_index)
+
+
+def _generate(
+    ports: GeneratePorts,
+    slug: str,
+    config: GenerateConfig,
+    chapter_index: int | None,
+) -> GenerationReport:
     books = ports.open_books(slug)
     terms = ports.open_terms(slug)
     store = ports.open_records(slug)
@@ -91,7 +113,7 @@ def generate_passages(
     work = ParagraphWork(ports=ports, loaded=loaded, config=config, tally=tally)
     started = ports.monotonic()
     try:
-        _run_session(work, started)
+        _run_session(work, started, chapter_index)
         closed = runs.record_success(_as_tally(run.id, tally))
         ports.notifier.notify_completion(closed)
     except FrankError as exc:
@@ -100,19 +122,21 @@ def generate_passages(
             RunFailure(tally=_as_tally(run.id, tally), error=exc),
         )
         raise
-    return _report(slug, books.get_structure(slug), store)
+    return _report(slug, books.get_structure(slug), store, tally)
 
 
 def book_generation_status(ports: StatusPorts, slug: str) -> StatusReport:
     books = ports.open_books(slug)
     structure = books.get_structure(slug)
     done = _complete_count(structure)
+    total = len(structure.passages)
     pace = _pace(ports.open_runs(slug).list_for_book(structure.book.id))
     return StatusReport(
         slug=slug,
         passages_done=done,
-        passages_total=len(structure.passages),
+        passages_total=total,
         passages_per_hour=pace,
+        eta_hours=_eta_hours(done, total, pace),
     )
 
 
@@ -121,24 +145,29 @@ def render_status(report: StatusReport) -> str:
         pace = "—"
     else:
         pace = f"{report.passages_per_hour:.1f}"
+    eta = "—" if report.eta_hours is None else f"{report.eta_hours:.1f} h"
     return (
         f"passages: {report.passages_done}/{report.passages_total}\n"
         f"pace: {pace} passages/hour\n"
+        f"eta: {eta}\n"
     )
 
 
 def render_generation_report(report: GenerationReport) -> str:
     return (
         f"passages: {report.passages_done}/{report.passages_total}\n"
+        f"session: {report.session_passages}\n"
         f"needs_human: {report.needs_human}\n"
     )
 
 
-def _run_session(work: ParagraphWork, started: float) -> None:
+def _run_session(
+    work: ParagraphWork, started: float, chapter_index: int | None
+) -> None:
     config = work.config
     tally = work.tally
     structure = work.loaded.structure
-    for passage in _ordered_passages(structure):
+    for passage in _ordered_passages(structure, chapter_index):
         if _passage_complete(structure, passage):
             continue
         if tally.passages_done >= config.session.max_passages:
@@ -170,14 +199,15 @@ def _fill_passage(work: ParagraphWork, passage: Passage) -> None:
         generate_paragraph(work, paragraph, view)
 
 
-def _ordered_passages(structure: BookStructure) -> tuple[Passage, ...]:
+def _ordered_passages(
+    structure: BookStructure, chapter_index: int | None
+) -> tuple[Passage, ...]:
     chapters = {item.id: item.index for item in structure.chapters}
-    return tuple(
-        sorted(
-            structure.passages,
-            key=lambda item: (chapters[item.chapter_id], item.index),
-        )
-    )
+    rows = structure.passages
+    if chapter_index is not None:
+        wanted = {item.id for item in structure.chapters if item.index == chapter_index}
+        rows = tuple(item for item in rows if item.chapter_id in wanted)
+    return tuple(sorted(rows, key=lambda item: (chapters[item.chapter_id], item.index)))
 
 
 def _passage_complete(structure: BookStructure, passage: Passage) -> bool:
@@ -190,14 +220,21 @@ def _complete_count(structure: BookStructure) -> int:
 
 
 def _report(
-    slug: str, structure: BookStructure, store: FrankRecordRepository
+    slug: str,
+    structure: BookStructure,
+    store: FrankRecordRepository,
+    tally: SessionTally,
 ) -> GenerationReport:
+    records = store.get_records(slug)
     needs = sum(1 for item in store.get_qa(slug) if not item.passed)
     return GenerationReport(
         slug=slug,
         passages_done=_complete_count(structure),
         passages_total=len(structure.passages),
         needs_human=needs,
+        session_passages=tally.passages_done,
+        fast_count=sum(1 for item in records if item.tier is ModelTier.FAST),
+        smart_count=sum(1 for item in records if item.tier is ModelTier.SMART),
     )
 
 
@@ -220,3 +257,10 @@ def _pace(runs: tuple[Run, ...]) -> float | None:
     if hours <= 0 or done <= 0:
         return None
     return done / hours
+
+
+def _eta_hours(done: int, total: int, pace: float | None) -> float | None:
+    leftover = total - done
+    if pace is None or leftover <= 0:
+        return None
+    return leftover / pace
